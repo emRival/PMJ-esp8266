@@ -149,20 +149,20 @@ namespace esp8266 {
     //% blockId=esp8266_create_firebase_json
     //% block="create JSON|%key1 = %value1||%key2 = %value2|%key3 = %value3"
     export function createFirebaseJSON(key1: string, value1: string,
-        key2: string = "", value2: string = "",
-        key3: string = "", value3: string = ""): string {
+        key2?: string, value2?: string,
+        key3?: string, value3?: string): string {
         let json = "{"
 
         // Add first key-value pair
         json += "\"" + key1 + "\":\"" + value1 + "\""
 
         // Add second key-value pair if provided
-        if (key2 != "" && value2 != "") {
+        if (key2 && value2) {
             json += ",\"" + key2 + "\":\"" + value2 + "\""
         }
 
         // Add third key-value pair if provided
-        if (key3 != "" && value3 != "") {
+        if (key3 && value3) {
             json += ",\"" + key3 + "\":\"" + value3 + "\""
         }
 
