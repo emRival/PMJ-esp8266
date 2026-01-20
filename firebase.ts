@@ -201,9 +201,10 @@ namespace esp8266 {
         // Connect to Firebase. Return if failed.
         if (sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 10000) == false) return
 
-        // Construct the HTTP PUT request
+        // Construct the HTTP request
+        // PATCH request to update only specific fields without overwriting others
         let requestPath = "/" + path + ".json?auth=" + firebaseApiKey
-        let httpRequest = "PUT " + requestPath + " HTTP/1.1\r\n"
+        let httpRequest = "PATCH " + requestPath + " HTTP/1.1\r\n"
         httpRequest += "Host: " + host + "\r\n"
         httpRequest += "Content-Type: application/json\r\n"
         httpRequest += "Content-Length: " + jsonData.length + "\r\n"
