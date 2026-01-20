@@ -189,7 +189,6 @@ namespace esp8266 {
     /**
      * Send SENSOR reading to Firebase.
      * Perfect for: temperature, light, humidity, etc.
-     * @param path Firebase path (e.g., "test", "iot", "devices").
      * @param deviceName Name of sensor (e.g., "suhu").
      * @param value Sensor reading.
      * @param unit Unit of measurement (e.g., "C", "%", "lux").
@@ -198,12 +197,11 @@ namespace esp8266 {
     //% weight=25
     //% blockGap=40
     //% blockId=esp8266_firebase_sensor
-    //% block="Firebase send SENSOR|path %path|name %deviceName|value %value|unit %unit"
+    //% block="Firebase send SENSOR|name %deviceName|value %value|unit %unit"
     //% value.defl=0
     //% unit.defl="C"
-    //% path.defl="iot"
-    export function firebaseSendSensor(path: string, deviceName: string, value: number, unit: string) {
+    export function firebaseSendSensor(deviceName: string, value: number, unit: string) {
         let json = "{\"" + deviceName + "\":{\"tipe\":\"sensor\",\"value\":" + value + ",\"satuan\":\"" + unit + "\"}}"
-        sendFirebaseData(path, json)
+        sendFirebaseData(firebasePath, json)
     }
 }
