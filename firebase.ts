@@ -196,16 +196,15 @@ namespace esp8266 {
         httpRequest += "\r\n"
 
         // Send request
-        if (!sendCommand("AT+CIPSEND=" + httpRequest.length, ">", 2000)) {
+        if (!sendCommand("AT+CIPSEND=" + httpRequest.length, "OK")) {
             sendCommand("AT+CIPCLOSE", "OK", 1000)
             return ""
         }
 
         sendCommand(httpRequest, null, 100)
 
-        // Wait for response - give enough time for full response
-        basic.pause(1500)
-        let response = getResponse("", 3000)
+        // Wait for response
+        let response = getResponse("", 4000)
 
         // Close connection
         sendCommand("AT+CIPCLOSE", "OK", 1000)
@@ -299,7 +298,7 @@ namespace esp8266 {
         httpRequest += jsonData
 
         // Send request
-        if (!sendCommand("AT+CIPSEND=" + httpRequest.length, ">", 2000)) {
+        if (!sendCommand("AT+CIPSEND=" + httpRequest.length, "OK")) {
             sendCommand("AT+CIPCLOSE", "OK", 1000)
             return
         }
@@ -313,7 +312,6 @@ namespace esp8266 {
         }
 
         // Check response status
-        basic.pause(500)
         let response = getResponse("", 2000)
 
         // Check if response contains 200 OK
