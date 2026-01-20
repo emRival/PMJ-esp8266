@@ -1,49 +1,23 @@
-/*******************************************************************************
- * Functions for Firebase Realtime Database
- *
- * Author: PMJ
- * Firebase integration added to ESP8266 extension
- * Original ESP8266 extension by: Cytron Technologies Sdn Bhd
- *******************************************************************************/
-
+/**
+ * Support for Firebase Realtime Database.
+ */
 namespace esp8266 {
-    // Firebase configuration variables
     let firebaseApiKey = ""
     let firebaseDatabaseURL = ""
     let firebaseProjectId = ""
-    let firebasePath = "iot"  // Default path
-
-    // Flag to indicate whether the data was sent to Firebase successfully.
-    let firebaseDataSent = false
-
-
+    let firebasePath = "iot" // Default path
 
     /**
-     * Return true if data is sent to Firebase successfully.
+     * Configure Firebase parameters.
+     * @param apiKey API Key from Firebase Console.
+     * @param databaseURL Database URL (e.g., https://your-project.firebaseio.com).
+     * @param projectId Project ID (e.g., your-project).
      */
     //% subcategory="Firebase"
     //% weight=30
     //% blockGap=8
-    //% blockId=esp8266_is_firebase_data_sent
-    //% block="Firebase data sent"
-    export function isFirebaseDataSent(): boolean {
-        return firebaseDataSent
-    }
-
-
-
-    /**
-     * Configure Firebase connection.
-     * Get these values from Firebase Console.
-     * @param apiKey Firebase API Key.
-     * @param databaseURL Firebase Database URL (e.g., https://project-id.firebaseio.com).
-     * @param projectId Firebase Project ID.
-     */
-    //% subcategory="Firebase"
-    //% weight=29
-    //% blockGap=8
     //% blockId=esp8266_configure_firebase
-    //% block="setup Firebase|API Key %apiKey|Database URL %databaseURL|Project ID %projectId"
+    //% block="Firebase config|API Key %apiKey|URL %databaseURL|Project ID %projectId"
     export function configureFirebase(apiKey: string, databaseURL: string, projectId: string) {
         firebaseApiKey = apiKey
         firebaseDatabaseURL = databaseURL
@@ -66,7 +40,6 @@ namespace esp8266 {
     export function setFirebasePath(path: string) {
         firebasePath = path
     }
-
 
 
     /**
@@ -119,17 +92,22 @@ namespace esp8266 {
         sendCommand("AT+CIPSEND=" + httpRequest.length)
         sendCommand(httpRequest, null, 100)
 
-        // Wait for response
-        basic.pause(500)
-
-        // Get response
-        let response = getResponse("", 2000)
+        // Wait for response - look for +IPD
+        let response = getResponse("+IPD", 4000)
         sendCommand("AT+CIPCLOSE", "OK", 1000)
 
         if (response == "") return ""
 
-        // Find JSON data (skip HTTP headers)
-        let jsonStart = response.indexOf("{")
+        // Find formatted response: +IPD,length:DATA
+        // Find colon after +IPD which marks start of data
+        let ipdIndex = response.indexOf("+IPD")
+        if (ipdIndex == -1) return ""
+
+        let colonIndex = response.indexOf(":", ipdIndex)
+        if (colonIndex == -1) return ""
+
+        // Find start of JSON
+        let jsonStart = response.indexOf("{", colonIndex)
         if (jsonStart == -1) return ""
 
         let jsonData = response.substr(jsonStart)
@@ -167,8 +145,6 @@ namespace esp8266 {
             }
             if (endIndex == 0) endIndex = valueStr.length
         }
-
-        if (endIndex == 0) endIndex = valueStr.length
 
         return valueStr.substr(0, endIndex).trim()
     }
@@ -224,14 +200,9 @@ namespace esp8266 {
      * @param path Database path (e.g., /iot).
      * @param jsonData JSON data to send.
      */
-    //% subcategory="Firebase"
-    //% weight=28
-    //% blockGap=8
+    //% blockHidden=true
     //% blockId=esp8266_send_firebase_data
-    //% block="send to Firebase|path %path|data %jsonData"
-    //% advanced=true
     export function sendFirebaseData(path: string, jsonData: string) {
-        // Reset the flag.
         firebaseDataSent = false
 
         // Make sure the WiFi is connected.
@@ -253,7 +224,6 @@ namespace esp8266 {
         if (host.includes("http://")) {
             host = host.substr(7)
         }
-        // Remove trailing slash if present
         if (host.charAt(host.length - 1) == "/") {
             host = host.substr(0, host.length - 1)
         }
@@ -290,38 +260,30 @@ namespace esp8266 {
 
         // Close the connection.
         sendCommand("AT+CIPCLOSE", "OK", 1000)
-
         firebaseDataSent = true
-        return
     }
 
-
-
     /**
-     * Send SWITCH (ON/OFF) to Firebase.
-     * Perfect for: lights, fans, pumps, etc.
-     * @param deviceName Name of device (e.g., "lampu").
-     * @param value 0 = OFF, 1 = ON.
+     * Send SWITCH data to Firebase.
+     * @param deviceName Name of switch (e.g., "lampu").
+     * @param value Switch status (0 for OFF, 1 for ON).
      */
     //% subcategory="Firebase"
-    //% weight=27
+    //% weight=29
     //% blockGap=8
     //% blockId=esp8266_firebase_switch
     //% block="Firebase send SWITCH|name %deviceName|value %value"
     //% value.min=0 value.max=1
-    //% value.defl=0
     export function firebaseSendSwitch(deviceName: string, value: number) {
-        let json = "{\"" + deviceName + "\":{\"tipe\":\"switch\",\"value\":" + value + "}}"
+        let val = value == 1 ? 1 : 0
+        let json = "{\"" + deviceName + "\":{\"tipe\":\"switch\",\"value\":" + val + "}}"
         sendFirebaseData(firebasePath, json)
     }
 
-
-
     /**
-     * Send DIMMER (0-1024) to Firebase.
-     * Perfect for: fan speed, LED brightness, motor speed, etc.
-     * @param deviceName Name of device (e.g., "kipas").
-     * @param value Value from 0 to 1024.
+     * Send DIMMER data to Firebase.
+     * @param deviceName Name of dimmer (e.g., "kipas").
+     * @param value Value (0-1024).
      */
     //% subcategory="Firebase"
     //% weight=26
@@ -329,13 +291,10 @@ namespace esp8266 {
     //% blockId=esp8266_firebase_dimmer
     //% block="Firebase send DIMMER|name %deviceName|value %value"
     //% value.min=0 value.max=1024
-    //% value.defl=512
     export function firebaseSendDimmer(deviceName: string, value: number) {
         let json = "{\"" + deviceName + "\":{\"tipe\":\"dimmer\",\"value\":" + value + ",\"batas_atas\":1024}}"
         sendFirebaseData(firebasePath, json)
     }
-
-
 
     /**
      * Send SENSOR reading to Firebase.
