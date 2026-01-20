@@ -1,6 +1,6 @@
 {
     "name": "pmj-esp8266",
-    "version": "2.1.0-stable",
+    "version": "2.1.0",
     "description": "PMJ MakeCode Package for ESP8266 WiFi Module with Firebase Support",
     "license": "MIT",
     "dependencies": {
