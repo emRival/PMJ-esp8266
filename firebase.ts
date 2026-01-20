@@ -160,6 +160,50 @@ namespace esp8266 {
 
 
     /**
+     * Read device value from Firebase as NUMBER.
+     * Returns the value as a number (0 if error).
+     * @param deviceName Name of device to read (e.g., "lampu", "suhu").
+     */
+    //% subcategory="Firebase"
+    //% weight=26
+    //% blockGap=40
+    //% blockId=esp8266_read_firebase_number
+    //% block="Firebase read NUMBER of %deviceName"
+    export function readFirebaseNumber(deviceName: string): number {
+        let valueStr = readFirebaseValue(deviceName)
+        if (valueStr == "") return 0
+
+        // Convert string to number
+        let result = 0
+        let isNegative = false
+        let hasDecimal = false
+        let decimalPlace = 0
+
+        for (let i = 0; i < valueStr.length; i++) {
+            let char = valueStr.charAt(i)
+
+            if (char == "-" && i == 0) {
+                isNegative = true
+            } else if (char == ".") {
+                hasDecimal = true
+            } else if (char >= "0" && char <= "9") {
+                let digit = char.charCodeAt(0) - 48  // ASCII '0' = 48
+
+                if (hasDecimal) {
+                    decimalPlace++
+                    result = result + digit / Math.pow(10, decimalPlace)
+                } else {
+                    result = result * 10 + digit
+                }
+            }
+        }
+
+        return isNegative ? -result : result
+    }
+
+
+
+    /**
      * Send data to Firebase Realtime Database.
      * @param path Database path (e.g., /iot).
      * @param jsonData JSON data to send.
