@@ -123,7 +123,7 @@ namespace esp8266 {
 
         let jsonData = httpResponse.substr(bodyIndex)
 
-        // Ensure we are looking at the JSON object
+        // Find the start of the JSON object (skip whitespace or other characters)
         let jsonStart = jsonData.indexOf("{")
         if (jsonStart == -1) return ""
         jsonData = jsonData.substr(jsonStart)
@@ -284,6 +284,7 @@ namespace esp8266 {
      * Return true if last data sent successfully.
      */
     //% subcategory="Firebase"
+    //% weight=24
     //% blockId=esp8266_is_firebase_data_sent
     //% block="Firebase data sent"
     export function isFirebaseDataSent(): boolean {
