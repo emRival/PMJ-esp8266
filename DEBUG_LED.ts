@@ -100,29 +100,35 @@ input.onButtonPressed(Button.B, function () {
 
     // Step 5: Get response
     basic.pause(1000)
-    let response = esp8266.getResponse("", 3000)
+    // PENTING: Cari "+IPD" (data masuk)
+    // Kalau cuma getResponse("", 3000) nanti cuma dapet "SEND OK"
+    let response = esp8266.getResponse("+IPD", 4000)
     esp8266.sendCommand("AT+CIPCLOSE", "OK", 1000)
 
     if (response == "") {
         basic.showString("EMPTY")
         return
     }
-    basic.showString("5")  // Got response
+    basic.showString("5")  // Got response (ada +IPD)
     basic.pause(300)
 
-    // Step 6: Find JSON
-    let jsonStart = response.indexOf("{")
+    // Step 6: Find JSON (setelah +IPD dan :)
+    let ipdIndex = response.indexOf("+IPD")
+    let colonIndex = response.indexOf(":", ipdIndex)
+    let jsonStart = response.indexOf("{", colonIndex)
+
     if (jsonStart == -1) {
         basic.showString("NO JSON")
-        basic.showNumber(response.length)  // Show response length
+        // Show length of what we got
+        basic.showNumber(response.length)
         return
     }
     basic.showString("6")  // Found JSON
-    basic.showNumber(jsonStart)  // Show JSON start position
+    basic.showNumber(jsonStart)
     basic.pause(500)
 
     // Step 7: Extract JSON
-    let jsonData = response.substr(jsonStart, 50)  // First 50 chars
+    let jsonData = response.substr(jsonStart)
 
     // Step 8: Find "value"
     let valueIndex = jsonData.indexOf("\"value\":")
@@ -137,7 +143,14 @@ input.onButtonPressed(Button.B, function () {
     // Step 9: Extract value
     let valueStr = jsonData.substr(valueIndex + 8, 5)
 
-    // Show first character of value
+    // Clean data
+    if (valueStr.charAt(0) == "\"") {
+        valueStr = valueStr.substr(1, 1) // Ambil isi string
+    } else {
+        valueStr = valueStr.substr(0, 1) // Ambil angka pertama
+    }
+
+    // Show value
     basic.showString("V=")
     basic.showString(valueStr)
 })
