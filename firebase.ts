@@ -409,4 +409,123 @@ namespace esp8266 {
         let fullPath = basePath + "/" + itemName
         sendFirebaseData(fullPath, jsonData)
     }
+
+
+
+    /**
+     * Start building a multiple devices JSON.
+     * Use this to send multiple devices in one request.
+     * Returns an empty object string to start building.
+     */
+    //% subcategory="Firebase"
+    //% weight=20
+    //% blockGap=8
+    //% blockId=esp8266_start_multi_device
+    //% block="start multi-device JSON"
+    export function startMultiDeviceJSON(): string {
+        return "{"
+    }
+
+
+
+    /**
+     * Add a switch device to multi-device JSON.
+     * @param multiJson The JSON being built (from startMultiDeviceJSON).
+     * @param deviceName Name of the device (e.g., "lampu_taman").
+     * @param value Switch state (true/false).
+     */
+    //% subcategory="Firebase"
+    //% weight=19
+    //% blockGap=8
+    //% blockId=esp8266_add_switch_device
+    //% block="add Switch to JSON %multiJson|name %deviceName|value %value"
+    export function addSwitchToMultiJSON(multiJson: string, deviceName: string, value: boolean): string {
+        // Add comma if not first item
+        if (multiJson.length > 1) {
+            multiJson += ","
+        }
+
+        multiJson += "\"" + deviceName + "\":{"
+        multiJson += "\"tipe\":\"switch\","
+        multiJson += "\"value\":" + (value ? "1" : "0")
+        multiJson += "}"
+
+        return multiJson
+    }
+
+
+
+    /**
+     * Add a dimmer device to multi-device JSON.
+     * @param multiJson The JSON being built.
+     * @param deviceName Name of the device (e.g., "Kipas").
+     * @param value Current dimmer value.
+     * @param maxValue Maximum value (batas_atas).
+     */
+    //% subcategory="Firebase"
+    //% weight=18
+    //% blockGap=8
+    //% blockId=esp8266_add_dimmer_device
+    //% block="add Dimmer to JSON %multiJson|name %deviceName|value %value|max %maxValue"
+    export function addDimmerToMultiJSON(multiJson: string, deviceName: string, value: number, maxValue: number): string {
+        // Add comma if not first item
+        if (multiJson.length > 1) {
+            multiJson += ","
+        }
+
+        multiJson += "\"" + deviceName + "\":{"
+        multiJson += "\"tipe\":\"dimmer\","
+        multiJson += "\"batas_atas\":" + maxValue + ","
+        multiJson += "\"value\":" + value
+        multiJson += "}"
+
+        return multiJson
+    }
+
+
+
+    /**
+     * Add a sensor device to multi-device JSON.
+     * @param multiJson The JSON being built.
+     * @param deviceName Name of the device (e.g., "suhu").
+     * @param value Current sensor reading.
+     * @param maxValue Maximum expected value (batas_atas).
+     * @param unit Unit of measurement (e.g., "C", "%").
+     */
+    //% subcategory="Firebase"
+    //% weight=17
+    //% blockGap=8
+    //% blockId=esp8266_add_sensor_device
+    //% block="add Sensor to JSON %multiJson|name %deviceName|value %value|max %maxValue|unit %unit"
+    export function addSensorToMultiJSON(multiJson: string, deviceName: string, value: number, maxValue: number, unit: string): string {
+        // Add comma if not first item
+        if (multiJson.length > 1) {
+            multiJson += ","
+        }
+
+        multiJson += "\"" + deviceName + "\":{"
+        multiJson += "\"tipe\":\"sensor\","
+        multiJson += "\"batas_atas\":" + maxValue + ","
+        multiJson += "\"value\":" + value + ","
+        multiJson += "\"satuan\":\"" + unit + "\""
+        multiJson += "}"
+
+        return multiJson
+    }
+
+
+
+    /**
+     * Finish building multi-device JSON.
+     * Call this after adding all devices.
+     * @param multiJson The JSON being built.
+     */
+    //% subcategory="Firebase"
+    //% weight=16
+    //% blockGap=8
+    //% blockId=esp8266_finish_multi_device
+    //% block="finish multi-device JSON %multiJson"
+    export function finishMultiDeviceJSON(multiJson: string): string {
+        return multiJson + "}"
+    }
 }
