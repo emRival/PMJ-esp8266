@@ -119,21 +119,35 @@ namespace esp8266 {
         sendCommand("AT+CIPSEND=" + httpRequest.length)
         sendCommand(httpRequest, null, 100)
 
+        // Wait for response
+        basic.pause(500)
+
         // Get response
-        let response = getResponse("+IPD", 3000)
+        let response = getResponse("", 2000)
         sendCommand("AT+CIPCLOSE", "OK", 1000)
 
         if (response == "") return ""
 
+        // Find JSON data (skip HTTP headers)
+        let jsonStart = response.indexOf("{")
+        if (jsonStart == -1) return ""
+
+        let jsonData = response.substr(jsonStart)
+
         // Parse JSON to get "value" field
-        let valueIndex = response.indexOf("\"value\":")
+        let valueIndex = jsonData.indexOf("\"value\":")
         if (valueIndex == -1) return ""
 
         // Find the value after "value":
         let startIndex = valueIndex + 8
-        let valueStr = response.substr(startIndex)
+        let valueStr = jsonData.substr(startIndex)
 
-        // Find end of value (comma, closing brace, or quote)
+        // Skip whitespace
+        while (valueStr.charAt(0) == " " || valueStr.charAt(0) == "\t") {
+            valueStr = valueStr.substr(1)
+        }
+
+        // Find end of value
         let endIndex = 0
         let isString = valueStr.charAt(0) == "\""
 
@@ -141,15 +155,17 @@ namespace esp8266 {
             // String value - find closing quote
             valueStr = valueStr.substr(1)
             endIndex = valueStr.indexOf("\"")
+            if (endIndex == -1) endIndex = valueStr.length
         } else {
-            // Number value - find comma or brace
+            // Number value - find comma, brace, or whitespace
             for (let i = 0; i < valueStr.length; i++) {
                 let char = valueStr.charAt(i)
-                if (char == "," || char == "}") {
+                if (char == "," || char == "}" || char == " " || char == "\r" || char == "\n") {
                     endIndex = i
                     break
                 }
             }
+            if (endIndex == 0) endIndex = valueStr.length
         }
 
         if (endIndex == 0) endIndex = valueStr.length
