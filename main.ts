@@ -83,44 +83,35 @@ namespace esp8266 {
 
 
     /**
-     * Get the specific response from ESP8266.
-     * Return the line start with the specific response.
-     * @param command The specific response we want to get.
+     * Get response from ESP8266.
+     * @param expected_response The expected response.
      * @param timeout Timeout in milliseconds.
      */
     //% blockHidden=true
     //% blockId=esp8266_get_response
-    export function getResponse(response: string, timeout: number = 100): string {
-        let responseLine = ""
-        let timestamp = input.runningTime()
-        while (true) {
-            // Timeout.
-            if (input.runningTime() - timestamp > timeout) {
-                // Check if expected response received in case no CRLF received.
-                if (rxData.includes(response)) {
-                    responseLine = rxData
+    export function getResponse(expected_response: string = "", timeout: number = 100): string {
+        let startTime = input.runningTime()
+        let buffer = ""
+
+        while ((input.runningTime() - startTime) < timeout) {
+            let chunk = serial.readString()
+            if (chunk.length > 0) {
+                buffer += chunk
+
+                // If waiting for specific response marker like "+IPD"
+                if (expected_response != "") {
+                    if (buffer.includes(expected_response)) {
+                        // Continue reading a bit more to get the payload
+                        basic.pause(100)
+                        buffer += serial.readString()
+                        return buffer
+                    }
                 }
-                break
             }
-
-            // Read until the end of the line.
-            rxData += serial.readString()
-            if (rxData.includes("\r\n")) {
-                // Check if expected response received.
-                if (rxData.slice(0, rxData.indexOf("\r\n")).includes(response)) {
-                    responseLine = rxData.slice(0, rxData.indexOf("\r\n"))
-
-                    // Trim the Rx data for next call.
-                    rxData = rxData.slice(rxData.indexOf("\r\n") + 2)
-                    break
-                }
-
-                // Trim the Rx data before loop again.
-                rxData = rxData.slice(rxData.indexOf("\r\n") + 2)
-            }
+            basic.pause(10)
         }
 
-        return responseLine
+        return expected_response == "" ? buffer : ""
     }
 
 
