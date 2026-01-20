@@ -59,13 +59,13 @@ input.onButtonPressed(Button.B, function () {
 
     let value = esp8266.readFirebaseValue("lampu_teras")
 
-    if (value == "") {
+    if (value == 0) {
         basic.showIcon(IconNames.No)
-        basic.showString("FAIL")
+        basic.showString("ERR")
     } else {
         basic.showIcon(IconNames.Yes)
         basic.showString("V=")
-        basic.showString(value)
+        basic.showNumber(value)
     }
 })
 

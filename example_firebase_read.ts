@@ -77,15 +77,15 @@ input.onButtonPressed(Button.A, function () {
 input.onButtonPressed(Button.B, function () {
     basic.showString("B")
 
-    // Baca sebagai STRING
+    // Baca sebagai NUMBER (readFirebaseValue sekarang return integer)
     let lampValue = esp8266.readFirebaseValue("lampu_kamar")
 
     // Tampilkan hasil
-    if (lampValue == "") {
-        basic.showString("EMPTY")
+    if (lampValue == 0) {
+        basic.showString("OFF/ERR")
     } else {
         basic.showString("V=")
-        basic.showString(lampValue)
+        basic.showNumber(lampValue)
     }
 })
 

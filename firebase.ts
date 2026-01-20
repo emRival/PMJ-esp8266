@@ -164,7 +164,8 @@ namespace esp8266 {
 
     /**
      * Read device value from Firebase.
-     * Returns the value as a string.
+     * Returns the value as a number (integer).
+     * Returns 0 if error or not found.
      * @param deviceName Name of device to read (e.g., "lampu_teras", "suhu").
      */
     //% subcategory="Firebase"
@@ -172,12 +173,12 @@ namespace esp8266 {
     //% blockGap=40
     //% blockId=esp8266_read_firebase_value
     //% block="Firebase read value of %deviceName"
-    export function readFirebaseValue(deviceName: string): string {
+    export function readFirebaseValue(deviceName: string): number {
         // Validate WiFi connection
-        if (!isWifiConnected()) return ""
+        if (!isWifiConnected()) return 0
 
         // Validate Firebase configuration
-        if (firebaseDatabaseURL == "" || firebaseApiKey == "") return ""
+        if (firebaseDatabaseURL == "" || firebaseApiKey == "") return 0
 
         // Build full path
         let fullPath = cleanPath(firebasePath + "/" + deviceName)
@@ -185,7 +186,7 @@ namespace esp8266 {
 
         // Connect to Firebase via SSL
         if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 10000)) {
-            return ""
+            return 0
         }
 
         // Build GET request
@@ -198,7 +199,7 @@ namespace esp8266 {
         // Send request
         if (!sendCommand("AT+CIPSEND=" + httpRequest.length, "OK")) {
             sendCommand("AT+CIPCLOSE", "OK", 1000)
-            return ""
+            return 0
         }
 
         sendCommand(httpRequest, null, 100)
@@ -210,30 +211,24 @@ namespace esp8266 {
         sendCommand("AT+CIPCLOSE", "OK", 1000)
 
         // Validate response
-        if (response == "") return ""
+        if (response == "") return 0
 
         // Extract JSON from HTTP response
         let jsonData = extractJsonFromResponse(response)
-        if (jsonData == "" || jsonData == "null") return ""
+        if (jsonData == "" || jsonData == "null") return 0
 
-        // Extract value field from JSON
-        return extractValueFromJson(jsonData)
+        // Extract value field from JSON as STRING
+        let valueStr = extractValueFromJson(jsonData)
+        if (valueStr == "") return 0
+
+        // Parse string to number
+        return parseStringToNumber(valueStr)
     }
 
     /**
-     * Read device value from Firebase as NUMBER.
-     * Returns the value as a number (0 if error).
-     * @param deviceName Name of device to read (e.g., "lampu_teras", "suhu").
+     * Helper: Parse string to number
      */
-    //% subcategory="Firebase"
-    //% weight=26
-    //% blockGap=40
-    //% blockId=esp8266_read_firebase_number
-    //% block="Firebase read NUMBER of %deviceName"
-    export function readFirebaseNumber(deviceName: string): number {
-        let valueStr = readFirebaseValue(deviceName)
-        if (valueStr == "") return 0
-
+    function parseStringToNumber(valueStr: string): number {
         // Parse string to number
         let result = 0
         let isNegative = false
@@ -260,6 +255,20 @@ namespace esp8266 {
         }
 
         return isNegative ? -result : result
+    }
+
+    /**
+     * Read device value from Firebase as NUMBER.
+     * (Alias for readFirebaseValue - both return number now)
+     * @param deviceName Name of device to read (e.g., "lampu_teras", "suhu").
+     */
+    //% subcategory="Firebase"
+    //% weight=26
+    //% blockGap=40
+    //% blockId=esp8266_read_firebase_number
+    //% block="Firebase read NUMBER of %deviceName"
+    export function readFirebaseNumber(deviceName: string): number {
+        return readFirebaseValue(deviceName)
     }
 
     /**
