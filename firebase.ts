@@ -413,6 +413,84 @@ namespace esp8266 {
 
 
     /**
+     * Send Switch device to Firebase (simple & practical).
+     * @param path Firebase path (e.g., /iot).
+     * @param deviceName Device name (e.g., lampu_taman).
+     * @param value Switch value (0=OFF, 1=ON).
+     */
+    //% subcategory="Firebase"
+    //% weight=20
+    //% blockGap=8
+    //% blockId=esp8266_send_switch
+    //% block="send Switch to Firebase|path $path|device $deviceName|value $value"
+    //% value.min=0 value.max=1
+    export function sendSwitch(path: string, deviceName: string, value: number) {
+        let json = "{"
+        json += "\"" + deviceName + "\":{"
+        json += "\"tipe\":\"switch\","
+        json += "\"value\":" + value
+        json += "}}"
+
+        sendFirebaseData(path, json)
+    }
+
+
+
+    /**
+     * Send Dimmer device to Firebase (simple & practical).
+     * @param path Firebase path (e.g., /iot).
+     * @param deviceName Device name (e.g., Kipas).
+     * @param value Current value (0-1024).
+     * @param maxValue Maximum value (default 1024).
+     */
+    //% subcategory="Firebase"
+    //% weight=19
+    //% blockGap=8
+    //% blockId=esp8266_send_dimmer
+    //% block="send Dimmer to Firebase|path $path|device $deviceName|value $value|max $maxValue"
+    //% value.min=0 value.max=1024
+    //% maxValue.defl=1024
+    export function sendDimmer(path: string, deviceName: string, value: number, maxValue: number) {
+        let json = "{"
+        json += "\"" + deviceName + "\":{"
+        json += "\"tipe\":\"dimmer\","
+        json += "\"batas_atas\":" + maxValue + ","
+        json += "\"value\":" + value
+        json += "}}"
+
+        sendFirebaseData(path, json)
+    }
+
+
+
+    /**
+     * Send Sensor device to Firebase (simple & practical).
+     * @param path Firebase path (e.g., /iot).
+     * @param deviceName Device name (e.g., suhu).
+     * @param value Sensor reading.
+     * @param maxValue Maximum expected value.
+     * @param unit Unit of measurement (e.g., C, %).
+     */
+    //% subcategory="Firebase"
+    //% weight=18
+    //% blockGap=40
+    //% blockId=esp8266_send_sensor
+    //% block="send Sensor to Firebase|path $path|device $deviceName|value $value|max $maxValue|unit $unit"
+    export function sendSensor(path: string, deviceName: string, value: number, maxValue: number, unit: string) {
+        let json = "{"
+        json += "\"" + deviceName + "\":{"
+        json += "\"tipe\":\"sensor\","
+        json += "\"batas_atas\":" + maxValue + ","
+        json += "\"value\":" + value + ","
+        json += "\"satuan\":\"" + unit + "\""
+        json += "}}"
+
+        sendFirebaseData(path, json)
+    }
+
+
+
+    /**
      * Start building a multiple devices JSON.
      * Use this to send multiple devices in one request.
      * Returns an empty object string to start building.
