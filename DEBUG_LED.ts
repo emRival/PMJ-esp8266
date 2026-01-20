@@ -92,58 +92,74 @@ input.onButtonPressed(Button.B, function () {
     httpRequest += "Host: " + host + "\r\n"
     httpRequest += "\r\n"
 
-    esp8266.sendCommand("AT+CIPSEND=" + httpRequest.length)
+    esp8266.sendCommand("AT+CIPSEND=" + httpRequest.length, "OK")
     esp8266.sendCommand(httpRequest, null, 100)
 
     basic.showString("4")  // Request sent
     basic.pause(300)
 
-    // Step 5: Get response
+    // Step 5: Get response - DEBUG MODE: Read EVERYTHING
     basic.pause(1000)
-    // PENTING: Cari "+IPD" (data masuk)
-    // Kalau cuma getResponse("", 3000) nanti cuma dapet "SEND OK"
-    let response = esp8266.getResponse("+IPD", 4000)
+
+    // Kita baca SEMUA (tanpa filter +IPD) selama 4 detik
+    let response = esp8266.getResponse("", 4000)
+    let hasIPD = response.includes("+IPD")
+
     esp8266.sendCommand("AT+CIPCLOSE", "OK", 1000)
 
     if (response == "") {
         basic.showString("EMPTY")
         return
     }
+
+    // Jika tidak ada +IPD tapi ada data, mungkin error
+    if (!hasIPD) {
+        basic.showString("NO IPD")
+        // Tampilkan 10 karakter pertama untuk hint
+        let hint = response.substr(0, 10)
+        basic.showString(hint)
+        return
+    }
+
     basic.showString("5")  // Got response (ada +IPD)
     basic.pause(300)
 
-    // Step 6: Find JSON (setelah +IPD dan :)
-    let ipdIndex = response.indexOf("+IPD")
-    let colonIndex = response.indexOf(":", ipdIndex)
-    let jsonStart = response.indexOf("{", colonIndex)
-
-    if (jsonStart == -1) {
-        basic.showString("NO JSON")
-        // Show length
-        basic.showNumber(response.length)
-
-        // SCROLL CONTENT
-        if (colonIndex != -1) {
-            let content = response.substr(colonIndex + 1)
-            basic.showString("C:")
-            basic.showString(content)
-        } else {
-            basic.showString("R:")
-            basic.showString(response)
+    // Step 6: Find JSON (setelah header)
+    // Cari double CRLF
+    let bodyIndex = response.indexOf("\r\n\r\n")
+    if (bodyIndex == -1) {
+        // Fallback cari {
+        bodyIndex = response.indexOf("{")
+        if (bodyIndex == -1) {
+            basic.showString("NO JSON")
+            let debugLen = response.length
+            basic.showNumber(debugLen)
+            return
         }
-        return
+    } else {
+        bodyIndex += 4
     }
-    basic.showString("6")  // Found JSON
-    basic.showNumber(jsonStart)
+
+    basic.showString("6")
     basic.pause(500)
 
-    // Step 7: Extract JSON
-    let jsonData = response.substr(jsonStart)
+    // Step 7: Parse JSON Content
+    let content = response.substr(bodyIndex)
+    let jsonStart = content.indexOf("{")
+    if (jsonStart == -1) {
+        basic.showString("BAD JSON")
+        return
+    }
+
+    let jsonData = content.substr(jsonStart)
 
     // Step 8: Find "value"
     let valueIndex = jsonData.indexOf("\"value\":")
     if (valueIndex == -1) {
         basic.showString("NO VAL")
+        // Show snippet
+        let snippet = jsonData.substr(0, 10)
+        basic.showString(snippet)
         return
     }
     basic.showString("7")  // Found value

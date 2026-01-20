@@ -90,7 +90,7 @@ namespace esp8266 {
         httpRequest += "\r\n"
 
         // Send request
-        sendCommand("AT+CIPSEND=" + httpRequest.length)
+        sendCommand("AT+CIPSEND=" + httpRequest.length, "OK")
         sendCommand(httpRequest, null, 100)
 
         // Wait for response - look for +IPD
