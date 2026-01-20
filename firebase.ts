@@ -11,6 +11,7 @@ namespace esp8266 {
     let firebaseApiKey = ""
     let firebaseDatabaseURL = ""
     let firebaseProjectId = ""
+    let firebasePath = "iot"  // Default path
 
     // Flag to indicate whether the data was sent to Firebase successfully.
     let firebaseDataSent = false
@@ -40,13 +41,30 @@ namespace esp8266 {
      */
     //% subcategory="Firebase"
     //% weight=29
-    //% blockGap=40
+    //% blockGap=8
     //% blockId=esp8266_configure_firebase
     //% block="setup Firebase|API Key %apiKey|Database URL %databaseURL|Project ID %projectId"
     export function configureFirebase(apiKey: string, databaseURL: string, projectId: string) {
         firebaseApiKey = apiKey
         firebaseDatabaseURL = databaseURL
         firebaseProjectId = projectId
+    }
+
+
+
+    /**
+     * Set Firebase path where all data will be sent.
+     * Call this once at the beginning.
+     * @param path Firebase path (e.g., "test", "iot", "devices").
+     */
+    //% subcategory="Firebase"
+    //% weight=28
+    //% blockGap=40
+    //% blockId=esp8266_set_firebase_path
+    //% block="set Firebase path %path"
+    //% path.defl="iot"
+    export function setFirebasePath(path: string) {
+        firebasePath = path
     }
 
 
@@ -131,7 +149,6 @@ namespace esp8266 {
     /**
      * Send SWITCH (ON/OFF) to Firebase.
      * Perfect for: lights, fans, pumps, etc.
-     * @param path Firebase path (e.g., "test", "iot", "devices").
      * @param deviceName Name of device (e.g., "lampu").
      * @param value 0 = OFF, 1 = ON.
      */
@@ -139,13 +156,12 @@ namespace esp8266 {
     //% weight=27
     //% blockGap=8
     //% blockId=esp8266_firebase_switch
-    //% block="Firebase send SWITCH|path %path|name %deviceName|value %value"
+    //% block="Firebase send SWITCH|name %deviceName|value %value"
     //% value.min=0 value.max=1
     //% value.defl=0
-    //% path.defl="iot"
-    export function firebaseSendSwitch(path: string, deviceName: string, value: number) {
+    export function firebaseSendSwitch(deviceName: string, value: number) {
         let json = "{\"" + deviceName + "\":{\"tipe\":\"switch\",\"value\":" + value + "}}"
-        sendFirebaseData(path, json)
+        sendFirebaseData(firebasePath, json)
     }
 
 
@@ -153,7 +169,6 @@ namespace esp8266 {
     /**
      * Send DIMMER (0-1024) to Firebase.
      * Perfect for: fan speed, LED brightness, motor speed, etc.
-     * @param path Firebase path (e.g., "test", "iot", "devices").
      * @param deviceName Name of device (e.g., "kipas").
      * @param value Value from 0 to 1024.
      */
@@ -161,13 +176,12 @@ namespace esp8266 {
     //% weight=26
     //% blockGap=8
     //% blockId=esp8266_firebase_dimmer
-    //% block="Firebase send DIMMER|path %path|name %deviceName|value %value"
+    //% block="Firebase send DIMMER|name %deviceName|value %value"
     //% value.min=0 value.max=1024
     //% value.defl=512
-    //% path.defl="iot"
-    export function firebaseSendDimmer(path: string, deviceName: string, value: number) {
+    export function firebaseSendDimmer(deviceName: string, value: number) {
         let json = "{\"" + deviceName + "\":{\"tipe\":\"dimmer\",\"value\":" + value + ",\"batas_atas\":1024}}"
-        sendFirebaseData(path, json)
+        sendFirebaseData(firebasePath, json)
     }
 
 

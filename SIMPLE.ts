@@ -13,6 +13,7 @@ const PROJECT = "your-project-id"
 esp8266.init(SerialPin.P16, SerialPin.P15, BaudRate.BaudRate115200)
 esp8266.connectWiFi(WIFI, PASS)
 esp8266.configureFirebase(API, URL, PROJECT)
+esp8266.setFirebasePath("test")  // ← SET PATH SEKALI DI SINI!
 basic.showIcon(IconNames.Heart)
 
 // STEP 3: KIRIM DATA (Pilih salah satu)
@@ -24,8 +25,8 @@ input.onButtonPressed(Button.A, function () {
     // Baca pin P1 (0 atau 1)
     let lampu = pins.digitalReadPin(DigitalPin.P1)
 
-    // Kirim ke Firebase
-    esp8266.firebaseSendSwitch("test", "lampu", lampu)
+    // Kirim ke Firebase (otomatis ke path "test")
+    esp8266.firebaseSendSwitch("lampu", lampu)
 
     // Tampilkan
     if (lampu == 1) {
@@ -42,8 +43,8 @@ input.onButtonPressed(Button.B, function () {
     // Baca pin analog P0 (0-1024)
     let kipas = pins.analogReadPin(AnalogPin.P0)
 
-    // Kirim ke Firebase
-    esp8266.firebaseSendDimmer("test", "kipas", kipas)
+    // Kirim ke Firebase (otomatis ke path "test")
+    esp8266.firebaseSendDimmer("kipas", kipas)
 
     // Tampilkan angka
     basic.showNumber(kipas)
@@ -56,8 +57,8 @@ input.onGesture(Gesture.Shake, function () {
     // Baca suhu
     let suhu = input.temperature()
 
-    // Kirim ke Firebase
-    esp8266.firebaseSendSensor("test", "suhu", suhu, "C")
+    // Kirim ke Firebase (otomatis ke path "test")
+    esp8266.firebaseSendSensor("suhu", suhu, "C")
 
     // Tampilkan suhu
     basic.showNumber(suhu)
@@ -69,13 +70,13 @@ input.onGesture(Gesture.Shake, function () {
 basic.forever(function () {
     basic.pause(10000)  // 10 detik
 
-    // Kirim suhu
-    esp8266.firebaseSendSensor("test", "suhu", input.temperature(), "C")
+    // Kirim suhu (otomatis ke path "test")
+    esp8266.firebaseSendSensor("suhu", input.temperature(), "C")
 
     basic.pause(1000)
 
-    // Kirim cahaya
-    esp8266.firebaseSendSensor("test", "cahaya", input.lightLevel(), "lux")
+    // Kirim cahaya (otomatis ke path "test")
+    esp8266.firebaseSendSensor("cahaya", input.lightLevel(), "lux")
 
     // Blink LED jika berhasil
     if (esp8266.isFirebaseDataSent()) {
