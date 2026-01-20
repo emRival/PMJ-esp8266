@@ -283,4 +283,130 @@ namespace esp8266 {
 
         return result
     }
+
+
+
+    /**
+     * Read specific value from Firebase path.
+     * Returns only the value of specified item, or empty string if not found.
+     * @param path Database path (e.g., /controls).
+     * @param item Item name to read (e.g., kipas_angin).
+     */
+    //% subcategory="Firebase"
+    //% weight=25
+    //% blockGap=8
+    //% blockId=esp8266_read_firebase_value
+    //% block="read Firebase value|Path %path|Item %item"
+    export function readFirebaseValue(path: string, item: string): string {
+        // Read full data from Firebase
+        let fullPath = path + "/" + item
+        let jsonData = readFirebaseData(fullPath)
+
+        if (jsonData == "") return ""
+
+        // Parse to get "value" field
+        // Expected format: {"tipe":"...","value":123,...}
+        let valueIndex = jsonData.indexOf("\"value\":")
+        if (valueIndex == -1) return ""
+
+        // Find the value after "value":
+        let startIndex = valueIndex + 8 // length of "value":
+        let valueStr = jsonData.substr(startIndex)
+
+        // Find end of value (comma or closing brace)
+        let endIndex = 0
+        for (let i = 0; i < valueStr.length; i++) {
+            let char = valueStr.charAt(i)
+            if (char == "," || char == "}") {
+                endIndex = i
+                break
+            }
+        }
+
+        if (endIndex == 0) endIndex = valueStr.length
+
+        return valueStr.substr(0, endIndex).trim()
+    }
+
+
+
+    /**
+     * Create JSON for SWITCH device (ON/OFF).
+     * @param value Switch state (0=OFF, 1=ON or true/false).
+     */
+    //% subcategory="Firebase"
+    //% weight=24
+    //% blockGap=8
+    //% blockId=esp8266_create_switch_json
+    //% block="create Switch JSON|value %value"
+    export function createSwitchJSON(value: boolean): string {
+        let json = "{"
+        json += "\"tipe\":\"switch\","
+        json += "\"value\":" + (value ? "true" : "false")
+        json += "}"
+        return json
+    }
+
+
+
+    /**
+     * Create JSON for DIMMER device (0-1024 or custom range).
+     * @param value Current dimmer value.
+     * @param maxValue Maximum value (default 1024).
+     * @param unit Unit of measurement (e.g., %, lux).
+     */
+    //% subcategory="Firebase"
+    //% weight=23
+    //% blockGap=8
+    //% blockId=esp8266_create_dimmer_json
+    //% block="create Dimmer JSON|value %value|max %maxValue|unit %unit"
+    export function createDimmerJSON(value: number, maxValue: number, unit: string): string {
+        let json = "{"
+        json += "\"tipe\":\"dimmer\","
+        json += "\"value\":" + value + ","
+        json += "\"batas_atas\":" + maxValue + ","
+        json += "\"satuan\":\"" + unit + "\""
+        json += "}"
+        return json
+    }
+
+
+
+    /**
+     * Create JSON for SENSOR device (read-only value).
+     * @param value Current sensor reading.
+     * @param unit Unit of measurement (e.g., °C, %, lux).
+     */
+    //% subcategory="Firebase"
+    //% weight=22
+    //% blockGap=8
+    //% blockId=esp8266_create_sensor_json
+    //% block="create Sensor JSON|value %value|unit %unit"
+    export function createSensorJSON(value: number, unit: string): string {
+        let json = "{"
+        json += "\"tipe\":\"sensor\","
+        json += "\"value\":" + value + ","
+        json += "\"satuan\":\"" + unit + "\""
+        json += "}"
+        return json
+    }
+
+
+
+    /**
+     * Send device data to Firebase with item name.
+     * Automatically creates proper path structure.
+     * @param basePath Base path (e.g., /controls or /sensors).
+     * @param itemName Device name (e.g., kipas_angin, lampu_teras).
+     * @param jsonData JSON data from create*JSON functions.
+     */
+    //% subcategory="Firebase"
+    //% weight=21
+    //% blockGap=8
+    //% blockId=esp8266_send_device_data
+    //% block="send device to Firebase|Path %basePath|Device %itemName|Data %jsonData"
+    export function sendDeviceData(basePath: string, itemName: string, jsonData: string) {
+        let fullPath = basePath + "/" + itemName
+        sendFirebaseData(fullPath, jsonData)
+    }
 }
