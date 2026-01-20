@@ -422,6 +422,7 @@ namespace esp8266 {
     //% blockGap=8
     //% blockId=esp8266_start_multi_device
     //% block="start multi-device JSON"
+    //% advanced=true
     export function startMultiDeviceJSON(): string {
         return "{"
     }
@@ -522,9 +523,11 @@ namespace esp8266 {
      */
     //% subcategory="Firebase"
     //% weight=16
-    //% blockGap=8
+    //% blockGap=40
     //% blockId=esp8266_finish_multi_device
-    //% block="finish multi-device JSON %multiJson"
+    //% block="finish multi-device JSON $multiJson"
+    //% multiJson.shadow="variables_get" multiJson.defl="json"
+    //% advanced=true
     export function finishMultiDeviceJSON(multiJson: string): string {
         return multiJson + "}"
     }
