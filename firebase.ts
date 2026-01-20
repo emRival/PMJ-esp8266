@@ -6,6 +6,7 @@ namespace esp8266 {
     let firebaseDatabaseURL = ""
     let firebaseProjectId = ""
     let firebasePath = "iot" // Default path
+    let firebaseDataSent = false
 
     /**
      * Configure Firebase parameters.
@@ -106,13 +107,29 @@ namespace esp8266 {
         let colonIndex = response.indexOf(":", ipdIndex)
         if (colonIndex == -1) return ""
 
-        // Find start of JSON
-        let jsonStart = response.indexOf("{", colonIndex)
-        if (jsonStart == -1) return ""
+        // Get the full HTTP response (headers + body)
+        let httpResponse = response.substr(colonIndex + 1)
 
-        let jsonData = response.substr(jsonStart)
+        // Find end of headers (double CRLF) to locate Body
+        let bodyIndex = httpResponse.indexOf("\r\n\r\n")
+        if (bodyIndex == -1) {
+            // Fallback: try to find start of JSON directly if headers are malformed or not found as expected
+            bodyIndex = httpResponse.indexOf("{")
+            if (bodyIndex == -1) return ""
+        } else {
+            // Skip the \r\n\r\n (4 characters)
+            bodyIndex += 4
+        }
+
+        let jsonData = httpResponse.substr(bodyIndex)
+
+        // Ensure we are looking at the JSON object
+        let jsonStart = jsonData.indexOf("{")
+        if (jsonStart == -1) return ""
+        jsonData = jsonData.substr(jsonStart)
 
         // Parse JSON to get "value" field
+        // We look for "value":
         let valueIndex = jsonData.indexOf("\"value\":")
         if (valueIndex == -1) return ""
 
@@ -261,6 +278,16 @@ namespace esp8266 {
         // Close the connection.
         sendCommand("AT+CIPCLOSE", "OK", 1000)
         firebaseDataSent = true
+    }
+
+    /**
+     * Return true if last data sent successfully.
+     */
+    //% subcategory="Firebase"
+    //% blockId=esp8266_is_firebase_data_sent
+    //% block="Firebase data sent"
+    export function isFirebaseDataSent(): boolean {
+        return firebaseDataSent
     }
 
     /**
