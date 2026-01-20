@@ -184,8 +184,8 @@ namespace esp8266 {
         let fullPath = cleanPath(firebasePath + "/" + deviceName)
         let host = extractHost(firebaseDatabaseURL)
 
-        // Connect to Firebase via SSL (EXTREME timeout - may fail!)
-        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 1000)) {
+        // Connect to Firebase via SSL (BALANCED timeout)
+        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 2000)) {
             return 0
         }
 
@@ -204,11 +204,11 @@ namespace esp8266 {
 
         sendCommand(httpRequest, null, 100)
 
-        // Wait for response (EXTREME timeout)
-        let response = getResponse("", 500)
+        // Wait for response (BALANCED timeout)
+        let response = getResponse("", 1000)
 
         // Close connection
-        sendCommand("AT+CIPCLOSE", "OK", 100)
+        sendCommand("AT+CIPCLOSE", "OK", 200)
 
         // Validate response
         if (response == "") return 0
@@ -291,8 +291,8 @@ namespace esp8266 {
         path = cleanPath(path)
         let host = extractHost(firebaseDatabaseURL)
 
-        // Connect to Firebase (EXTREME timeout - may fail!)
-        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 1000)) {
+        // Connect to Firebase (BALANCED timeout)
+        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 2000)) {
             return
         }
 
@@ -314,14 +314,14 @@ namespace esp8266 {
 
         sendCommand(httpRequest, null, 100)
 
-        // Wait for SEND OK (EXTREME timeout)
-        if (getResponse("SEND OK", 1000) == "") {
-            sendCommand("AT+CIPCLOSE", "OK", 100)
+        // Wait for SEND OK (BALANCED timeout)
+        if (getResponse("SEND OK", 1200) == "") {
+            sendCommand("AT+CIPCLOSE", "OK", 200)
             return
         }
 
         // Check response status
-        let response = getResponse("", 500)
+        let response = getResponse("", 1000)
 
         // Check if response contains 200 OK
         if (response != "" && response.includes("200")) {
@@ -329,7 +329,7 @@ namespace esp8266 {
         }
 
         // Close connection
-        sendCommand("AT+CIPCLOSE", "OK", 100)
+        sendCommand("AT+CIPCLOSE", "OK", 200)
     }
 
     /**
