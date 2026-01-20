@@ -119,8 +119,18 @@ input.onButtonPressed(Button.B, function () {
 
     if (jsonStart == -1) {
         basic.showString("NO JSON")
-        // Show length of what we got
+        // Show length
         basic.showNumber(response.length)
+
+        // SCROLL CONTENT
+        if (colonIndex != -1) {
+            let content = response.substr(colonIndex + 1)
+            basic.showString("C:")
+            basic.showString(content)
+        } else {
+            basic.showString("R:")
+            basic.showString(response)
+        }
         return
     }
     basic.showString("6")  // Found JSON
