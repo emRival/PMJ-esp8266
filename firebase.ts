@@ -135,38 +135,152 @@ namespace esp8266 {
 
     /**
      * Helper function to create JSON string from sensor values.
-     * This is a convenience function to help users create JSON data.
+     * Supports both string and number values for flexibility.
      * @param key1 First key name.
-     * @param value1 First value.
+     * @param value1 First value (string or number).
      * @param key2 Second key name (optional).
-     * @param value2 Second value (optional).
+     * @param value2 Second value (optional, string or number).
      * @param key3 Third key name (optional).
-     * @param value3 Third value (optional).
+     * @param value3 Third value (optional, string or number).
      */
     //% subcategory="Firebase"
     //% weight=27
     //% blockGap=8
     //% blockId=esp8266_create_firebase_json
     //% block="create JSON|%key1 = %value1||%key2 = %value2|%key3 = %value3"
-    export function createFirebaseJSON(key1: string, value1: string,
-        key2?: string, value2?: string,
-        key3?: string, value3?: string): string {
+    export function createFirebaseJSON(key1: string, value1: any,
+        key2?: string, value2?: any,
+        key3?: string, value3?: any): string {
         let json = "{"
 
         // Add first key-value pair
-        json += "\"" + key1 + "\":\"" + value1 + "\""
+        // Check if value is number or string
+        if (typeof value1 === "number") {
+            json += "\"" + key1 + "\":" + value1
+        } else {
+            json += "\"" + key1 + "\":\"" + value1 + "\""
+        }
 
         // Add second key-value pair if provided
-        if (key2 && value2) {
-            json += ",\"" + key2 + "\":\"" + value2 + "\""
+        if (key2 && value2 !== undefined && value2 !== null) {
+            if (typeof value2 === "number") {
+                json += ",\"" + key2 + "\":" + value2
+            } else {
+                json += ",\"" + key2 + "\":\"" + value2 + "\""
+            }
         }
 
         // Add third key-value pair if provided
-        if (key3 && value3) {
-            json += ",\"" + key3 + "\":\"" + value3 + "\""
+        if (key3 && value3 !== undefined && value3 !== null) {
+            if (typeof value3 === "number") {
+                json += ",\"" + key3 + "\":" + value3
+            } else {
+                json += ",\"" + key3 + "\":\"" + value3 + "\""
+            }
         }
 
         json += "}"
         return json
+    }
+
+
+
+    /**
+     * Read data from Firebase Realtime Database.
+     * Returns the value as string, or empty string if failed.
+     * @param path Database path to read from (e.g., /sensors/temperature).
+     */
+    //% subcategory="Firebase"
+    //% weight=26
+    //% blockGap=8
+    //% blockId=esp8266_read_firebase_data
+    //% block="read from Firebase|Path %path"
+    export function readFirebaseData(path: string): string {
+        let result = ""
+
+        // Make sure the WiFi is connected.
+        if (isWifiConnected() == false) return result
+
+        // Make sure Firebase is configured.
+        if (firebaseDatabaseURL == "" || firebaseApiKey == "") return result
+
+        // Remove leading slash if present
+        if (path.charAt(0) == "/") {
+            path = path.substr(1)
+        }
+
+        // Extract host from database URL
+        let host = firebaseDatabaseURL
+        if (host.includes("https://")) {
+            host = host.substr(8)
+        }
+        if (host.includes("http://")) {
+            host = host.substr(7)
+        }
+        // Remove trailing slash if present
+        if (host.charAt(host.length - 1) == "/") {
+            host = host.substr(0, host.length - 1)
+        }
+
+        // Connect to Firebase. Return if failed.
+        if (sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 10000) == false) return result
+
+        // Construct the HTTP GET request
+        let requestPath = "/" + path + ".json?auth=" + firebaseApiKey
+        let httpRequest = "GET " + requestPath + " HTTP/1.1\r\n"
+        httpRequest += "Host: " + host + "\r\n"
+        httpRequest += "\r\n"
+
+        // Send the request
+        sendCommand("AT+CIPSEND=" + httpRequest.length)
+        sendCommand(httpRequest, null, 100)
+
+        // Return if "SEND OK" is not received.
+        if (getResponse("SEND OK", 2000) == "") {
+            sendCommand("AT+CIPCLOSE", "OK", 1000)
+            return result
+        }
+
+        // Check the response from Firebase.
+        let response = getResponse("HTTP/1.1", 2000)
+        if (response == "" || !response.includes("200")) {
+            sendCommand("AT+CIPCLOSE", "OK", 1000)
+            return result
+        }
+
+        // Read the response data
+        // Firebase sends data after headers
+        // Skip headers and get the JSON data
+        let dataReceived = false
+        let timestamp = input.runningTime()
+        while (true) {
+            // Timeout after 3 seconds
+            if (input.runningTime() - timestamp > 3000) {
+                break
+            }
+
+            let line = getResponse("", 200)
+            if (line == "") {
+                if (dataReceived) break
+                continue
+            }
+
+            // Empty line indicates end of headers
+            if (line.length < 3) {
+                dataReceived = true
+                continue
+            }
+
+            // If we're past headers, this is our data
+            if (dataReceived) {
+                result = line
+                break
+            }
+        }
+
+        // Close the connection.
+        sendCommand("AT+CIPCLOSE", "OK", 1000)
+
+        return result
     }
 }

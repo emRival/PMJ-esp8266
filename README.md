@@ -134,6 +134,24 @@ Send JSON data to Firebase.
 esp8266.sendFirebaseData("/sensors/microbit1", jsonData)
 ```
 
+**Send Analog/Digital Pin directly (NEW!):**
+
+```blocks
+// No need to convert to string!
+let data = esp8266.createFirebaseJSON(
+    "suhu", pins.analogReadPin(AnalogPin.P0),
+    "status", "active"
+)
+esp8266.sendFirebaseData("/sensors/analog", data)
+```
+
+**Read data from Firebase (NEW!):**
+
+```blocks
+let firebaseData = esp8266.readFirebaseData("/controls/lampu_teras")
+basic.showString(firebaseData)
+```
+
 Show happy face if data is sent successfully.<br>
 Show sad face if failed.
 
