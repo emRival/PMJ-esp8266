@@ -6,7 +6,7 @@ This extension is tested with Espressif ESP-AT Firmware v2.2.0.
 **Modified by:** PMJ  
 **Original Extension:** [Cytron Technologies - ESP8266 WiFi Grove Module](https://www.cytron.io/p-grv-wifi-8266)
 
-![ESP8266 WiFi Grove Module](https://raw.githubusercontent.com/CytronTechnologies/pxt-esp8266/master/icon.jpeg)
+![ESP8266 WiFi Grove Module](https://raw.githubusercontent.com/emRival/PMJ-esp8266/main/icon.jpeg)
 
 ## Initialization (Selecting UART Pins and Baudrate)
 
