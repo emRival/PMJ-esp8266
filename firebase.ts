@@ -93,8 +93,9 @@ namespace esp8266 {
         sendCommand("AT+CIPSEND=" + httpRequest.length, "OK")
         sendCommand(httpRequest, null, 100)
 
-        // Wait for response - look for +IPD
-        let response = getResponse("+IPD", 4000)
+        // Wait for response - read for 3 seconds to ensure we get the full payload
+        // Do not use "+IPD" as expected response because it returns too early (before full body)
+        let response = getResponse("", 3000)
         sendCommand("AT+CIPCLOSE", "OK", 1000)
 
         if (response == "") return ""
@@ -113,7 +114,7 @@ namespace esp8266 {
         // Find end of headers (double CRLF) to locate Body
         let bodyIndex = httpResponse.indexOf("\r\n\r\n")
         if (bodyIndex == -1) {
-            // Fallback: try to find start of JSON directly if headers are malformed or not found as expected
+            // Fallback: try to find start of JSON directly
             bodyIndex = httpResponse.indexOf("{")
             if (bodyIndex == -1) return ""
         } else {
@@ -123,7 +124,10 @@ namespace esp8266 {
 
         let jsonData = httpResponse.substr(bodyIndex)
 
-        // Find the start of the JSON object (skip whitespace or other characters)
+        // Check if data is null (path not found)
+        if (jsonData.includes("null")) return ""
+
+        // Find the start of the JSON object
         let jsonStart = jsonData.indexOf("{")
         if (jsonStart == -1) return ""
         jsonData = jsonData.substr(jsonStart)

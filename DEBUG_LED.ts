@@ -148,6 +148,14 @@ input.onButtonPressed(Button.B, function () {
     let jsonStart = content.indexOf("{")
     if (jsonStart == -1) {
         basic.showString("BAD JSON")
+        // Check if null
+        if (content.includes("null")) {
+            basic.showString("NULL")
+        } else {
+            // Show first 10 chars
+            let debugContent = content.substr(0, 10)
+            basic.showString(debugContent)
+        }
         return
     }
 
