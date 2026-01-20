@@ -111,26 +111,17 @@ namespace esp8266 {
         // Get the full HTTP response (headers + body)
         let httpResponse = response.substr(colonIndex + 1)
 
-        // Find end of headers (double CRLF) to locate Body
-        let bodyIndex = httpResponse.indexOf("\r\n\r\n")
-        if (bodyIndex == -1) {
-            // Fallback: try to find start of JSON directly
-            bodyIndex = httpResponse.indexOf("{")
-            if (bodyIndex == -1) return ""
-        } else {
-            // Skip the \r\n\r\n (4 characters)
-            bodyIndex += 4
-        }
-
-        let jsonData = httpResponse.substr(bodyIndex)
-
         // Check if data is null (path not found)
-        if (jsonData.includes("null")) return ""
+        if (httpResponse.includes("null")) return ""
 
-        // Find the start of the JSON object
-        let jsonStart = jsonData.indexOf("{")
-        if (jsonStart == -1) return ""
-        jsonData = jsonData.substr(jsonStart)
+        // Find the start of the JSON object in the ENTIRE response
+        // We skip the header logic because finding \r\n\r\n is unreliable with echoes
+        let jsonStart = httpResponse.indexOf("{")
+        if (jsonStart == -1) {
+            // If no brace found, it might be a primitive value (e.g. number or string) or empty
+            return ""
+        }
+        let jsonData = httpResponse.substr(jsonStart)
 
         // Parse JSON to get "value" field
         // We look for "value":
