@@ -25,7 +25,7 @@ input.onButtonPressed(Button.A, function () {
     let lampu = pins.digitalReadPin(DigitalPin.P1)
 
     // Kirim ke Firebase
-    esp8266.firebaseSendSwitch("lampu", lampu)
+    esp8266.firebaseSendSwitch("test", "lampu", lampu)
 
     // Tampilkan
     if (lampu == 1) {
@@ -43,7 +43,7 @@ input.onButtonPressed(Button.B, function () {
     let kipas = pins.analogReadPin(AnalogPin.P0)
 
     // Kirim ke Firebase
-    esp8266.firebaseSendDimmer("kipas", kipas)
+    esp8266.firebaseSendDimmer("test", "kipas", kipas)
 
     // Tampilkan angka
     basic.showNumber(kipas)
@@ -57,7 +57,7 @@ input.onGesture(Gesture.Shake, function () {
     let suhu = input.temperature()
 
     // Kirim ke Firebase
-    esp8266.firebaseSendSensor("suhu", suhu, "C")
+    esp8266.firebaseSendSensor("test", "suhu", suhu, "C")
 
     // Tampilkan suhu
     basic.showNumber(suhu)
@@ -70,10 +70,12 @@ basic.forever(function () {
     basic.pause(10000)  // 10 detik
 
     // Kirim suhu
-    esp8266.firebaseSendSensor("suhu", input.temperature(), "C")
+    esp8266.firebaseSendSensor("test", "suhu", input.temperature(), "C")
+
+    basic.pause(1000)
 
     // Kirim cahaya
-    esp8266.firebaseSendSensor("cahaya", input.lightLevel(), "lux")
+    esp8266.firebaseSendSensor("test", "cahaya", input.lightLevel(), "lux")
 
     // Blink LED jika berhasil
     if (esp8266.isFirebaseDataSent()) {

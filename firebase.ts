@@ -131,6 +131,7 @@ namespace esp8266 {
     /**
      * Send SWITCH (ON/OFF) to Firebase.
      * Perfect for: lights, fans, pumps, etc.
+     * @param path Firebase path (e.g., "test", "iot", "devices").
      * @param deviceName Name of device (e.g., "lampu").
      * @param value 0 = OFF, 1 = ON.
      */
@@ -138,12 +139,13 @@ namespace esp8266 {
     //% weight=27
     //% blockGap=8
     //% blockId=esp8266_firebase_switch
-    //% block="Firebase send SWITCH|name %deviceName|value %value"
+    //% block="Firebase send SWITCH|path %path|name %deviceName|value %value"
     //% value.min=0 value.max=1
     //% value.defl=0
-    export function firebaseSendSwitch(deviceName: string, value: number) {
+    //% path.defl="iot"
+    export function firebaseSendSwitch(path: string, deviceName: string, value: number) {
         let json = "{\"" + deviceName + "\":{\"tipe\":\"switch\",\"value\":" + value + "}}"
-        sendFirebaseData("/iot", json)
+        sendFirebaseData(path, json)
     }
 
 
@@ -151,6 +153,7 @@ namespace esp8266 {
     /**
      * Send DIMMER (0-1024) to Firebase.
      * Perfect for: fan speed, LED brightness, motor speed, etc.
+     * @param path Firebase path (e.g., "test", "iot", "devices").
      * @param deviceName Name of device (e.g., "kipas").
      * @param value Value from 0 to 1024.
      */
@@ -158,12 +161,13 @@ namespace esp8266 {
     //% weight=26
     //% blockGap=8
     //% blockId=esp8266_firebase_dimmer
-    //% block="Firebase send DIMMER|name %deviceName|value %value"
+    //% block="Firebase send DIMMER|path %path|name %deviceName|value %value"
     //% value.min=0 value.max=1024
     //% value.defl=512
-    export function firebaseSendDimmer(deviceName: string, value: number) {
+    //% path.defl="iot"
+    export function firebaseSendDimmer(path: string, deviceName: string, value: number) {
         let json = "{\"" + deviceName + "\":{\"tipe\":\"dimmer\",\"value\":" + value + ",\"batas_atas\":1024}}"
-        sendFirebaseData("/iot", json)
+        sendFirebaseData(path, json)
     }
 
 
@@ -171,6 +175,7 @@ namespace esp8266 {
     /**
      * Send SENSOR reading to Firebase.
      * Perfect for: temperature, light, humidity, etc.
+     * @param path Firebase path (e.g., "test", "iot", "devices").
      * @param deviceName Name of sensor (e.g., "suhu").
      * @param value Sensor reading.
      * @param unit Unit of measurement (e.g., "C", "%", "lux").
@@ -179,11 +184,12 @@ namespace esp8266 {
     //% weight=25
     //% blockGap=40
     //% blockId=esp8266_firebase_sensor
-    //% block="Firebase send SENSOR|name %deviceName|value %value|unit %unit"
+    //% block="Firebase send SENSOR|path %path|name %deviceName|value %value|unit %unit"
     //% value.defl=0
     //% unit.defl="C"
-    export function firebaseSendSensor(deviceName: string, value: number, unit: string) {
+    //% path.defl="iot"
+    export function firebaseSendSensor(path: string, deviceName: string, value: number, unit: string) {
         let json = "{\"" + deviceName + "\":{\"tipe\":\"sensor\",\"value\":" + value + ",\"satuan\":\"" + unit + "\"}}"
-        sendFirebaseData("/iot", json)
+        sendFirebaseData(path, json)
     }
 }
