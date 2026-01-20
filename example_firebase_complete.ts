@@ -18,9 +18,9 @@
 const WIFI_SSID = "NAMA_WIFI_ANDA"
 const WIFI_PASSWORD = "PASSWORD_WIFI_ANDA"
 
-const FIREBASE_API_KEY = "AIzaSyBeA_kpqQghfkmfM7y2v6I1nWAxFHIxFKg"
-const FIREBASE_DATABASE_URL = "https://wikwo-test-default-rtdb.firebaseio.com"
-const FIREBASE_PROJECT_ID = "wikwo-test"
+const FIREBASE_API_KEY = "firebase_api_key"
+const FIREBASE_DATABASE_URL = "firebase_database_url"
+const FIREBASE_PROJECT_ID = "firebase_project_id"
 
 const DEVICE_ID = "microbit1" // ID unik untuk device ini
 
