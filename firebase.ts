@@ -59,12 +59,102 @@ namespace esp8266 {
      */
     //% subcategory="Firebase"
     //% weight=28
-    //% blockGap=40
+    //% blockGap=8
     //% blockId=esp8266_set_firebase_path
     //% block="set Firebase path %path"
     //% path.defl="iot"
     export function setFirebasePath(path: string) {
         firebasePath = path
+    }
+
+
+
+    /**
+     * Read device value from Firebase.
+     * Returns the value as a string.
+     * @param deviceName Name of device to read (e.g., "lampu", "suhu").
+     */
+    //% subcategory="Firebase"
+    //% weight=27
+    //% blockGap=40
+    //% blockId=esp8266_read_firebase_value
+    //% block="Firebase read value of %deviceName"
+    export function readFirebaseValue(deviceName: string): string {
+        // Make sure WiFi is connected
+        if (isWifiConnected() == false) return ""
+
+        // Make sure Firebase is configured
+        if (firebaseDatabaseURL == "" || firebaseApiKey == "") return ""
+
+        // Build full path
+        let fullPath = firebasePath + "/" + deviceName
+
+        // Remove leading slash if present
+        if (fullPath.charAt(0) == "/") {
+            fullPath = fullPath.substr(1)
+        }
+
+        // Extract host from database URL
+        let host = firebaseDatabaseURL
+        if (host.includes("https://")) {
+            host = host.substr(8)
+        }
+        if (host.includes("http://")) {
+            host = host.substr(7)
+        }
+        if (host.charAt(host.length - 1) == "/") {
+            host = host.substr(0, host.length - 1)
+        }
+
+        // Connect to Firebase
+        if (sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 10000) == false) return ""
+
+        // Construct GET request
+        let requestPath = "/" + fullPath + ".json?auth=" + firebaseApiKey
+        let httpRequest = "GET " + requestPath + " HTTP/1.1\r\n"
+        httpRequest += "Host: " + host + "\r\n"
+        httpRequest += "\r\n"
+
+        // Send request
+        sendCommand("AT+CIPSEND=" + httpRequest.length)
+        sendCommand(httpRequest, null, 100)
+
+        // Get response
+        let response = getResponse("+IPD", 3000)
+        sendCommand("AT+CIPCLOSE", "OK", 1000)
+
+        if (response == "") return ""
+
+        // Parse JSON to get "value" field
+        let valueIndex = response.indexOf("\"value\":")
+        if (valueIndex == -1) return ""
+
+        // Find the value after "value":
+        let startIndex = valueIndex + 8
+        let valueStr = response.substr(startIndex)
+
+        // Find end of value (comma, closing brace, or quote)
+        let endIndex = 0
+        let isString = valueStr.charAt(0) == "\""
+
+        if (isString) {
+            // String value - find closing quote
+            valueStr = valueStr.substr(1)
+            endIndex = valueStr.indexOf("\"")
+        } else {
+            // Number value - find comma or brace
+            for (let i = 0; i < valueStr.length; i++) {
+                let char = valueStr.charAt(i)
+                if (char == "," || char == "}") {
+                    endIndex = i
+                    break
+                }
+            }
+        }
+
+        if (endIndex == 0) endIndex = valueStr.length
+
+        return valueStr.substr(0, endIndex).trim()
     }
 
 
