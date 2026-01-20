@@ -185,7 +185,7 @@ namespace esp8266 {
         let host = extractHost(firebaseDatabaseURL)
 
         // Connect to Firebase via SSL
-        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 10000)) {
+        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 5000)) {
             return 0
         }
 
@@ -205,10 +205,10 @@ namespace esp8266 {
         sendCommand(httpRequest, null, 100)
 
         // Wait for response
-        let response = getResponse("", 4000)
+        let response = getResponse("", 2000)
 
         // Close connection
-        sendCommand("AT+CIPCLOSE", "OK", 1000)
+        sendCommand("AT+CIPCLOSE", "OK", 500)
 
         // Validate response
         if (response == "") return 0
@@ -292,7 +292,7 @@ namespace esp8266 {
         let host = extractHost(firebaseDatabaseURL)
 
         // Connect to Firebase
-        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 10000)) {
+        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 5000)) {
             return
         }
 
@@ -315,8 +315,8 @@ namespace esp8266 {
         sendCommand(httpRequest, null, 100)
 
         // Wait for SEND OK
-        if (getResponse("SEND OK", 3000) == "") {
-            sendCommand("AT+CIPCLOSE", "OK", 1000)
+        if (getResponse("SEND OK", 2000) == "") {
+            sendCommand("AT+CIPCLOSE", "OK", 500)
             return
         }
 
@@ -329,7 +329,7 @@ namespace esp8266 {
         }
 
         // Close connection
-        sendCommand("AT+CIPCLOSE", "OK", 1000)
+        sendCommand("AT+CIPCLOSE", "OK", 500)
     }
 
     /**
