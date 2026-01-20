@@ -1,5 +1,6 @@
 /**
  * Support for Firebase Realtime Database.
+ * FIXED VERSION - Improved HTTP parsing and error handling
  */
 namespace esp8266 {
     let firebaseApiKey = ""
@@ -25,8 +26,6 @@ namespace esp8266 {
         firebaseProjectId = projectId
     }
 
-
-
     /**
      * Set Firebase path where all data will be sent.
      * Call this once at the beginning.
@@ -42,34 +41,11 @@ namespace esp8266 {
         firebasePath = path
     }
 
-
     /**
-     * Read device value from Firebase.
-     * Returns the value as a string.
-     * @param deviceName Name of device to read (e.g., "lampu", "suhu").
+     * Helper: Extract host from Firebase URL
      */
-    //% subcategory="Firebase"
-    //% weight=27
-    //% blockGap=40
-    //% blockId=esp8266_read_firebase_value
-    //% block="Firebase read value of %deviceName"
-    export function readFirebaseValue(deviceName: string): string {
-        // Make sure WiFi is connected
-        if (isWifiConnected() == false) return ""
-
-        // Make sure Firebase is configured
-        if (firebaseDatabaseURL == "" || firebaseApiKey == "") return ""
-
-        // Build full path
-        let fullPath = firebasePath + "/" + deviceName
-
-        // Remove leading slash if present
-        if (fullPath.charAt(0) == "/") {
-            fullPath = fullPath.substr(1)
-        }
-
-        // Extract host from database URL
-        let host = firebaseDatabaseURL
+    function extractHost(url: string): string {
+        let host = url
         if (host.includes("https://")) {
             host = host.substr(8)
         }
@@ -79,94 +55,176 @@ namespace esp8266 {
         if (host.charAt(host.length - 1) == "/") {
             host = host.substr(0, host.length - 1)
         }
+        return host
+    }
 
-        // Connect to Firebase
-        if (sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 10000) == false) return ""
+    /**
+     * Helper: Clean path (remove leading slash)
+     */
+    function cleanPath(path: string): string {
+        if (path.charAt(0) == "/") {
+            return path.substr(1)
+        }
+        return path
+    }
 
-        // Construct GET request
-        let requestPath = "/" + fullPath + ".json?auth=" + firebaseApiKey
-        let httpRequest = "GET " + requestPath + " HTTP/1.1\r\n"
-        httpRequest += "Host: " + host + "\r\n"
-        httpRequest += "\r\n"
-
-        // Send request
-        sendCommand("AT+CIPSEND=" + httpRequest.length, "OK")
-        sendCommand(httpRequest, null, 100)
-
-        // Wait for response - read for 3 seconds to ensure we get the full payload
-        // Do not use "+IPD" as expected response because it returns too early (before full body)
-        let response = getResponse("", 3000)
-        sendCommand("AT+CIPCLOSE", "OK", 1000)
-
-        if (response == "") return ""
-
-        // Find formatted response: +IPD,length:DATA
-        // Find colon after +IPD which marks start of data
+    /**
+     * Helper: Extract JSON body from HTTP response
+     */
+    function extractJsonFromResponse(response: string): string {
+        // Find +IPD marker
         let ipdIndex = response.indexOf("+IPD")
         if (ipdIndex == -1) return ""
 
+        // Find colon after +IPD (marks start of HTTP response)
         let colonIndex = response.indexOf(":", ipdIndex)
         if (colonIndex == -1) return ""
 
-        // Get the full HTTP response (headers + body)
-        let httpResponse = response.substr(colonIndex + 1)
+        // Get everything after the colon
+        let httpData = response.substr(colonIndex + 1)
 
-        // Check if data is null (path not found)
-        if (httpResponse.includes("null")) return ""
-
-        // Find the start of the JSON object in the ENTIRE response
-        // We skip the header logic because finding \r\n\r\n is unreliable with echoes
-        let jsonStart = httpResponse.indexOf("{")
-        if (jsonStart == -1) {
-            // If no brace found, it might be a primitive value (e.g. number or string) or empty
-            return ""
+        // Find HTTP body (after headers)
+        // Look for double CRLF that separates headers from body
+        let bodyStart = httpData.indexOf("\r\n\r\n")
+        if (bodyStart != -1) {
+            httpData = httpData.substr(bodyStart + 4)
+        } else {
+            // Alternative: find first { if no clear header separation
+            let jsonStart = httpData.indexOf("{")
+            if (jsonStart != -1) {
+                httpData = httpData.substr(jsonStart)
+            }
         }
-        let jsonData = httpResponse.substr(jsonStart)
 
-        // Parse JSON to get "value" field
-        // We look for "value":
-        let valueIndex = jsonData.indexOf("\"value\":")
+        // Check if response is null
+        if (httpData.includes("null")) return "null"
+
+        // Find JSON object start
+        let braceIndex = httpData.indexOf("{")
+        if (braceIndex == -1) return ""
+
+        return httpData.substr(braceIndex)
+    }
+
+    /**
+     * Helper: Extract value from JSON string
+     * Supports both nested objects and direct values
+     */
+    function extractValueFromJson(jsonData: string): string {
+        if (jsonData == "" || jsonData == "null") return ""
+
+        // Look for "value": field
+        let valueIndex = jsonData.indexOf("\"value\"")
         if (valueIndex == -1) return ""
 
-        // Find the value after "value":
-        let startIndex = valueIndex + 8
+        // Find the colon after "value"
+        let colonIndex = jsonData.indexOf(":", valueIndex)
+        if (colonIndex == -1) return ""
+
+        // Start after the colon
+        let startIndex = colonIndex + 1
         let valueStr = jsonData.substr(startIndex)
 
         // Skip whitespace
-        while (valueStr.charAt(0) == " " || valueStr.charAt(0) == "\t") {
+        while (valueStr.length > 0 && (valueStr.charAt(0) == " " || valueStr.charAt(0) == "\t" || valueStr.charAt(0) == "\r" || valueStr.charAt(0) == "\n")) {
             valueStr = valueStr.substr(1)
         }
 
-        // Find end of value
-        let endIndex = 0
-        let isString = valueStr.charAt(0) == "\""
+        if (valueStr.length == 0) return ""
 
-        if (isString) {
+        // Determine if value is string or number
+        let firstChar = valueStr.charAt(0)
+        let endIndex = 0
+
+        if (firstChar == "\"") {
             // String value - find closing quote
             valueStr = valueStr.substr(1)
             endIndex = valueStr.indexOf("\"")
             if (endIndex == -1) endIndex = valueStr.length
+            return valueStr.substr(0, endIndex)
         } else {
-            // Number value - find comma, brace, or whitespace
+            // Number or boolean - find delimiter
             for (let i = 0; i < valueStr.length; i++) {
                 let char = valueStr.charAt(i)
-                if (char == "," || char == "}" || char == " " || char == "\r" || char == "\n") {
+                if (char == "," || char == "}" || char == " " || char == "\r" || char == "\n" || char == "\t") {
                     endIndex = i
                     break
                 }
             }
             if (endIndex == 0) endIndex = valueStr.length
-        }
 
-        return valueStr.substr(0, endIndex).trim()
+            let result = valueStr.substr(0, endIndex)
+            // Trim any remaining whitespace
+            while (result.length > 0 && (result.charAt(result.length - 1) == " " || result.charAt(result.length - 1) == "\r" || result.charAt(result.length - 1) == "\n")) {
+                result = result.substr(0, result.length - 1)
+            }
+            return result
+        }
     }
 
+    /**
+     * Read device value from Firebase.
+     * Returns the value as a string.
+     * @param deviceName Name of device to read (e.g., "lampu_teras", "suhu").
+     */
+    //% subcategory="Firebase"
+    //% weight=27
+    //% blockGap=40
+    //% blockId=esp8266_read_firebase_value
+    //% block="Firebase read value of %deviceName"
+    export function readFirebaseValue(deviceName: string): string {
+        // Validate WiFi connection
+        if (!isWifiConnected()) return ""
 
+        // Validate Firebase configuration
+        if (firebaseDatabaseURL == "" || firebaseApiKey == "") return ""
+
+        // Build full path
+        let fullPath = cleanPath(firebasePath + "/" + deviceName)
+        let host = extractHost(firebaseDatabaseURL)
+
+        // Connect to Firebase via SSL
+        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 10000)) {
+            return ""
+        }
+
+        // Build GET request
+        let requestPath = "/" + fullPath + ".json?auth=" + firebaseApiKey
+        let httpRequest = "GET " + requestPath + " HTTP/1.1\r\n"
+        httpRequest += "Host: " + host + "\r\n"
+        httpRequest += "Connection: close\r\n"
+        httpRequest += "\r\n"
+
+        // Send request
+        if (!sendCommand("AT+CIPSEND=" + httpRequest.length, ">", 2000)) {
+            sendCommand("AT+CIPCLOSE", "OK", 1000)
+            return ""
+        }
+
+        sendCommand(httpRequest, null, 100)
+
+        // Wait for response - give enough time for full response
+        basic.pause(1500)
+        let response = getResponse("", 3000)
+
+        // Close connection
+        sendCommand("AT+CIPCLOSE", "OK", 1000)
+
+        // Validate response
+        if (response == "") return ""
+
+        // Extract JSON from HTTP response
+        let jsonData = extractJsonFromResponse(response)
+        if (jsonData == "" || jsonData == "null") return ""
+
+        // Extract value field from JSON
+        return extractValueFromJson(jsonData)
+    }
 
     /**
      * Read device value from Firebase as NUMBER.
      * Returns the value as a number (0 if error).
-     * @param deviceName Name of device to read (e.g., "lampu", "suhu").
+     * @param deviceName Name of device to read (e.g., "lampu_teras", "suhu").
      */
     //% subcategory="Firebase"
     //% weight=26
@@ -177,7 +235,7 @@ namespace esp8266 {
         let valueStr = readFirebaseValue(deviceName)
         if (valueStr == "") return 0
 
-        // Convert string to number
+        // Parse string to number
         let result = 0
         let isNegative = false
         let hasDecimal = false
@@ -205,8 +263,6 @@ namespace esp8266 {
         return isNegative ? -result : result
     }
 
-
-
     /**
      * Send data to Firebase Realtime Database.
      * @param path Database path (e.g., /iot).
@@ -217,62 +273,56 @@ namespace esp8266 {
     export function sendFirebaseData(path: string, jsonData: string) {
         firebaseDataSent = false
 
-        // Make sure the WiFi is connected.
-        if (isWifiConnected() == false) return
+        // Validate WiFi connection
+        if (!isWifiConnected()) return
 
-        // Make sure Firebase is configured.
+        // Validate Firebase configuration
         if (firebaseDatabaseURL == "" || firebaseApiKey == "") return
 
-        // Remove leading slash if present
-        if (path.charAt(0) == "/") {
-            path = path.substr(1)
+        // Clean path and extract host
+        path = cleanPath(path)
+        let host = extractHost(firebaseDatabaseURL)
+
+        // Connect to Firebase
+        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 10000)) {
+            return
         }
 
-        // Extract host from database URL
-        let host = firebaseDatabaseURL
-        if (host.includes("https://")) {
-            host = host.substr(8)
-        }
-        if (host.includes("http://")) {
-            host = host.substr(7)
-        }
-        if (host.charAt(host.length - 1) == "/") {
-            host = host.substr(0, host.length - 1)
-        }
-
-        // Connect to Firebase. Return if failed.
-        if (sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 10000) == false) return
-
-        // Construct the HTTP request
-        // PATCH request to update only specific fields without overwriting others
+        // Build PATCH request (updates without overwriting)
         let requestPath = "/" + path + ".json?auth=" + firebaseApiKey
         let httpRequest = "PATCH " + requestPath + " HTTP/1.1\r\n"
         httpRequest += "Host: " + host + "\r\n"
         httpRequest += "Content-Type: application/json\r\n"
         httpRequest += "Content-Length: " + jsonData.length + "\r\n"
+        httpRequest += "Connection: close\r\n"
         httpRequest += "\r\n"
         httpRequest += jsonData
 
-        // Send the request
-        sendCommand("AT+CIPSEND=" + httpRequest.length)
+        // Send request
+        if (!sendCommand("AT+CIPSEND=" + httpRequest.length, ">", 2000)) {
+            sendCommand("AT+CIPCLOSE", "OK", 1000)
+            return
+        }
+
         sendCommand(httpRequest, null, 100)
 
-        // Return if "SEND OK" is not received.
-        if (getResponse("SEND OK", 2000) == "") {
+        // Wait for SEND OK
+        if (getResponse("SEND OK", 3000) == "") {
             sendCommand("AT+CIPCLOSE", "OK", 1000)
             return
         }
 
-        // Check the response from Firebase.
-        let response = getResponse("HTTP/1.1", 2000)
-        if (response == "" || !response.includes("200")) {
-            sendCommand("AT+CIPCLOSE", "OK", 1000)
-            return
+        // Check response status
+        basic.pause(500)
+        let response = getResponse("", 2000)
+
+        // Check if response contains 200 OK
+        if (response != "" && response.includes("200")) {
+            firebaseDataSent = true
         }
 
-        // Close the connection.
+        // Close connection
         sendCommand("AT+CIPCLOSE", "OK", 1000)
-        firebaseDataSent = true
     }
 
     /**
@@ -288,7 +338,7 @@ namespace esp8266 {
 
     /**
      * Send SWITCH data to Firebase.
-     * @param deviceName Name of switch (e.g., "lampu").
+     * @param deviceName Name of switch (e.g., "lampu_teras").
      * @param value Switch status (0 for OFF, 1 for ON).
      */
     //% subcategory="Firebase"
