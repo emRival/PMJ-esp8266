@@ -17,8 +17,7 @@
         "firebase.ts"
     ],
     "testFiles": [
-        "test.ts",
-        "DEBUG_LED.ts"
+        "test.ts"
     ],
     "public": true,
     "targetVersions": {
