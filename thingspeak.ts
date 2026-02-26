@@ -64,7 +64,7 @@ namespace esp8266 {
         if (isWifiConnected() == false) return
 
         // Connect to ThingSpeak. Return if failed.
-        if (sendCommand("AT+CIPSTART=\"TCP\",\"" + THINGSPEAK_API_URL + "\",80", "OK", 10000) == false) return
+        if (sendCommand("AT+CIPSTART=\"TCP\",\"" + THINGSPEAK_API_URL + "\",80", "OK", 3000) == false) return
 
         // Construct the data to send.
         let data = "GET /update?api_key=" + writeApiKey + "&field1=" + field1
@@ -81,10 +81,10 @@ namespace esp8266 {
         sendCommand(data)
 
         // Return if "SEND OK" is not received.
-        if (getResponse("SEND OK", 1000) == "") return
+        if (getResponse("SEND OK", 800) == "") return
 
         // Check the response from ThingSpeak.
-        let response = getResponse("+IPD", 1000)
+        let response = getResponse("+IPD", 800)
         if (response == "") return
 
         // Trim the response to get the upload count.

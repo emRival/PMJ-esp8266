@@ -174,20 +174,33 @@ namespace esp8266 {
     //% blockId=esp8266_read_firebase_value
     //% block="Firebase read value of %deviceName"
     export function readFirebaseValue(deviceName: string): number {
+        debugLog("FB-R", "Read: " + deviceName)
+        let fbStartTime = input.runningTime()
+
         // Validate WiFi connection
-        if (!isWifiConnected()) return 0
+        if (!isWifiConnected()) {
+            debugLog("FB-R", "FAIL: WiFi not connected")
+            return 0
+        }
 
         // Validate Firebase configuration
-        if (firebaseDatabaseURL == "" || firebaseApiKey == "") return 0
+        if (firebaseDatabaseURL == "" || firebaseApiKey == "") {
+            debugLog("FB-R", "FAIL: Firebase not configured")
+            return 0
+        }
 
         // Build full path
         let fullPath = cleanPath(firebasePath + "/" + deviceName)
         let host = extractHost(firebaseDatabaseURL)
+        debugLog("FB-R", "Path: /" + fullPath)
 
-        // Connect to Firebase via SSL (Proven working timeout)
-        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 3000)) {
+        // Connect to Firebase via SSL
+        debugLog("FB-R", "SSL connecting...")
+        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 2000)) {
+            debugLog("FB-R", "FAIL: SSL connect")
             return 0
         }
+        debugLog("FB-R", "SSL OK (" + (input.runningTime() - fbStartTime) + "ms)")
 
         // Build GET request
         let requestPath = "/" + fullPath + ".json?auth=" + firebaseApiKey
@@ -198,31 +211,46 @@ namespace esp8266 {
 
         // Send request
         if (!sendCommand("AT+CIPSEND=" + httpRequest.length, "OK")) {
-            sendCommand("AT+CIPCLOSE", "OK", 1000)
+            debugLog("FB-R", "FAIL: CIPSEND")
+            sendCommand("AT+CIPCLOSE", "OK", 200)
             return 0
         }
 
-        sendCommand(httpRequest, null, 100)
+        sendCommand(httpRequest, null, 50)
+        debugLog("FB-R", "Request sent, waiting response...")
 
-        // Wait for response (Proven working timeout)
-        let response = getResponse("", 1500)
+        // Wait for response with +IPD marker
+        let response = getResponse("+IPD", 800)
 
         // Close connection
-        sendCommand("AT+CIPCLOSE", "OK", 500)
+        sendCommand("AT+CIPCLOSE", "OK", 200)
 
         // Validate response
-        if (response == "") return 0
+        if (response == "") {
+            debugLog("FB-R", "FAIL: No response (" + (input.runningTime() - fbStartTime) + "ms)")
+            return 0
+        }
+        debugLog("FB-R", "Response len=" + response.length)
 
         // Extract JSON from HTTP response
         let jsonData = extractJsonFromResponse(response)
-        if (jsonData == "" || jsonData == "null") return 0
+        debugLog("FB-R", "JSON: " + jsonData.substr(0, 60))
+        if (jsonData == "" || jsonData == "null") {
+            debugLog("FB-R", "FAIL: Empty/null JSON")
+            return 0
+        }
 
         // Extract value field from JSON as STRING
         let valueStr = extractValueFromJson(jsonData)
-        if (valueStr == "") return 0
+        if (valueStr == "") {
+            debugLog("FB-R", "FAIL: No value field")
+            return 0
+        }
 
         // Parse string to number
-        return parseStringToNumber(valueStr)
+        let result = parseStringToNumber(valueStr)
+        debugLog("FB-R", "OK: " + result + " (" + (input.runningTime() - fbStartTime) + "ms total)")
+        return result
     }
 
     /**
@@ -280,21 +308,32 @@ namespace esp8266 {
     //% blockId=esp8266_send_firebase_data
     export function sendFirebaseData(path: string, jsonData: string) {
         firebaseDataSent = false
+        debugLog("FB-W", "Send: " + path + " data=" + jsonData.substr(0, 40))
+        let fbStartTime = input.runningTime()
 
         // Validate WiFi connection
-        if (!isWifiConnected()) return
+        if (!isWifiConnected()) {
+            debugLog("FB-W", "FAIL: WiFi not connected")
+            return
+        }
 
         // Validate Firebase configuration
-        if (firebaseDatabaseURL == "" || firebaseApiKey == "") return
+        if (firebaseDatabaseURL == "" || firebaseApiKey == "") {
+            debugLog("FB-W", "FAIL: Firebase not configured")
+            return
+        }
 
         // Clean path and extract host
         path = cleanPath(path)
         let host = extractHost(firebaseDatabaseURL)
 
-        // Connect to Firebase (Proven working timeout)
-        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 3000)) {
+        // Connect to Firebase
+        debugLog("FB-W", "SSL connecting...")
+        if (!sendCommand("AT+CIPSTART=\"SSL\",\"" + host + "\",443", "OK", 2000)) {
+            debugLog("FB-W", "FAIL: SSL connect")
             return
         }
+        debugLog("FB-W", "SSL OK (" + (input.runningTime() - fbStartTime) + "ms)")
 
         // Build PATCH request (updates without overwriting)
         let requestPath = "/" + path + ".json?auth=" + firebaseApiKey
@@ -308,28 +347,35 @@ namespace esp8266 {
 
         // Send request
         if (!sendCommand("AT+CIPSEND=" + httpRequest.length, "OK")) {
-            sendCommand("AT+CIPCLOSE", "OK", 1000)
+            debugLog("FB-W", "FAIL: CIPSEND")
+            sendCommand("AT+CIPCLOSE", "OK", 200)
             return
         }
 
-        sendCommand(httpRequest, null, 100)
+        sendCommand(httpRequest, null, 50)
+        debugLog("FB-W", "Request sent, waiting SEND OK...")
 
-        // Wait for SEND OK (Proven working timeout)
-        if (getResponse("SEND OK", 1500) == "") {
-            sendCommand("AT+CIPCLOSE", "OK", 500)
+        // Wait for SEND OK
+        if (getResponse("SEND OK", 800) == "") {
+            debugLog("FB-W", "FAIL: No SEND OK")
+            sendCommand("AT+CIPCLOSE", "OK", 200)
             return
         }
 
         // Check response status
-        let response = getResponse("", 1500)
+        debugLog("FB-W", "Waiting server response...")
+        let response = getResponse("+IPD", 800)
 
         // Check if response contains 200 OK
         if (response != "" && response.includes("200")) {
             firebaseDataSent = true
+            debugLog("FB-W", "OK: 200 (" + (input.runningTime() - fbStartTime) + "ms total)")
+        } else {
+            debugLog("FB-W", "FAIL: No 200 response (" + (input.runningTime() - fbStartTime) + "ms)")
         }
 
         // Close connection
-        sendCommand("AT+CIPCLOSE", "OK", 500)
+        sendCommand("AT+CIPCLOSE", "OK", 200)
     }
 
     /**

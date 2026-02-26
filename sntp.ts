@@ -187,13 +187,13 @@ namespace esp8266 {
         let timestamp = input.runningTime()
         while (true) {
             // Timeout after 10 seconds.
-            if (input.runningTime() - timestamp > 20000) {
+            if (input.runningTime() - timestamp > 10000) {
                 return
             }
 
             // Get the time.
             sendCommand("AT+CIPSNTPTIME?")
-            let response = getResponse("+CIPSNTPTIME:", 2000)
+            let response = getResponse("+CIPSNTPTIME:", 1000)
             if (response == "") return
 
             // Fill up the time and date accordingly.
@@ -208,7 +208,7 @@ namespace esp8266 {
                 break
             }
 
-            basic.pause(100)
+            basic.pause(50)
         }
 
         // Day of week.

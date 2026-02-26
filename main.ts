@@ -18,6 +18,57 @@ namespace esp8266 {
     // Buffer for data received from UART.
     let rxData = ""
 
+    // Debug mode flag and log buffer.
+    let debugMode = false
+    let lastDebugMsg = ""
+
+    /**
+     * Enable or disable debug mode.
+     * When enabled, AT commands and responses are logged to serial console.
+     * @param enable Set true to enable debug logging.
+     */
+    //% weight=9
+    //% blockGap=8
+    //% blockId=esp8266_set_debug_mode
+    //% block="set debug mode %enable"
+    export function setDebugMode(enable: boolean) {
+        debugMode = enable
+    }
+
+    /**
+     * Return true if debug mode is enabled.
+     */
+    //% weight=8
+    //% blockGap=8
+    //% blockId=esp8266_is_debug_mode
+    //% block="debug mode enabled"
+    export function isDebugMode(): boolean {
+        return debugMode
+    }
+
+    /**
+     * Get the last debug message.
+     * Useful for showing on LED or serial monitor.
+     */
+    //% weight=7
+    //% blockGap=40
+    //% blockId=esp8266_get_last_debug
+    //% block="last debug message"
+    export function getLastDebugMessage(): string {
+        return lastDebugMsg
+    }
+
+    /**
+     * Internal debug logger.
+     * Writes to serial console when debug mode is enabled.
+     */
+    function debugLog(tag: string, msg: string) {
+        if (!debugMode) return
+        let logLine = "[" + tag + "] " + msg
+        lastDebugMsg = logLine
+        serial.writeLine(logLine)
+    }
+
 
 
     /**
@@ -30,8 +81,8 @@ namespace esp8266 {
     //% blockHidden=true
     //% blockId=esp8266_send_command
     export function sendCommand(command: string, expected_response: string = null, timeout: number = 100): boolean {
-        // Wait a while from previous command.
-        basic.pause(10)
+        // Minimal stabilizer between commands.
+        basic.pause(1)
 
         // Flush the Rx buffer.
         serial.readString()
@@ -39,6 +90,7 @@ namespace esp8266 {
 
         // Send the command and end with "\r\n".
         serial.writeString(command + "\r\n")
+        debugLog("CMD", command)
 
         // Don't check if expected response is not specified.
         if (expected_response == null) {
@@ -77,6 +129,7 @@ namespace esp8266 {
             }
         }
 
+        debugLog("CMD", (result ? "OK" : "FAIL") + " (" + (input.runningTime() - timestamp) + "ms)")
         return result
     }
 
@@ -92,23 +145,30 @@ namespace esp8266 {
     export function getResponse(expected_response: string = "", timeout: number = 100): string {
         let startTime = input.runningTime()
         let buffer = ""
+        let lastDataTime = 0
 
         while ((input.runningTime() - startTime) < timeout) {
             let chunk = serial.readString()
             if (chunk.length > 0) {
                 buffer += chunk
+                lastDataTime = input.runningTime()
 
                 // If waiting for specific response marker like "+IPD"
                 if (expected_response != "") {
                     if (buffer.includes(expected_response)) {
-                        // Continue reading a bit more to get the payload
-                        basic.pause(100)
+                        // Brief read to capture remaining payload
+                        basic.pause(20)
                         buffer += serial.readString()
                         return buffer
                     }
                 }
+            } else if (expected_response == "" && buffer.length > 0) {
+                // Early exit: if no expected response and we have data but stream idle >30ms
+                if (input.runningTime() - lastDataTime > 30) {
+                    return buffer
+                }
             }
-            basic.pause(10)
+            basic.pause(1)
         }
 
         return expected_response == "" ? buffer : ""
@@ -188,7 +248,7 @@ namespace esp8266 {
         // Redirect the serial port.
         serial.redirect(tx, rx, baudrate)
         serial.setTxBufferSize(128)
-        serial.setRxBufferSize(128)
+        serial.setRxBufferSize(256)
 
         // Reset the flag.
         esp8266Initialized = false
@@ -216,7 +276,7 @@ namespace esp8266 {
     export function isWifiConnected(): boolean {
         // Get the connection status.
         sendCommand("AT+CIPSTATUS")
-        let status = getResponse("STATUS:", 1000)
+        let status = getResponse("STATUS:", 500)
 
         // Wait until OK is received.
         getResponse("OK")

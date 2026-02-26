@@ -17,7 +17,7 @@
 // ============================================================================
 
 esp8266.init(SerialPin.P16, SerialPin.P15, BaudRate.BaudRate115200)
-basic.pause(1000)
+basic.pause(200)
 
 // ============================================================================
 // STEP 2: CONNECT TO WIFI
@@ -25,7 +25,7 @@ basic.pause(1000)
 
 basic.showString("WIFI")
 esp8266.connectWiFi("YOUR_WIFI_SSID", "YOUR_WIFI_PASSWORD")
-basic.pause(3000)
+basic.pause(500)
 
 if (esp8266.isWifiConnected()) {
     basic.showIcon(IconNames.Yes)
@@ -177,13 +177,13 @@ input.onPinPressed(TouchPin.P0, function () {
 
     // Send multiple devices
     esp8266.firebaseSendSwitch("lampu_teras", 1)
-    basic.pause(500)
+    basic.pause(100)
 
     esp8266.firebaseSendSwitch("lampu_kamar", 0)
-    basic.pause(500)
+    basic.pause(100)
 
     esp8266.firebaseSendSensor("suhu", input.temperature(), "C")
-    basic.pause(500)
+    basic.pause(100)
 
     basic.showIcon(IconNames.Yes)
 })

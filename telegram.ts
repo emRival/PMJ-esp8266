@@ -49,7 +49,7 @@ namespace esp8266 {
         if (isWifiConnected() == false) return
 
         // Connect to Telegram. Return if failed.
-        if (sendCommand("AT+CIPSTART=\"SSL\",\"" + TELEGRAM_API_URL + "\",443", "OK", 10000) == false) return
+        if (sendCommand("AT+CIPSTART=\"SSL\",\"" + TELEGRAM_API_URL + "\",443", "OK", 3000) == false) return
 
         // Construct the data to send.
         let data = "GET /bot" + formatUrl(apiKey) + "/sendMessage?chat_id=" + formatUrl(chatId) + "&text=" + formatUrl(message)
@@ -61,22 +61,22 @@ namespace esp8266 {
         sendCommand(data)
 
         // Return if "SEND OK" is not received.
-        if (getResponse("SEND OK", 1000) == "") {
+        if (getResponse("SEND OK", 800) == "") {
             // Close the connection and return.
-            sendCommand("AT+CIPCLOSE", "OK", 1000)
+            sendCommand("AT+CIPCLOSE", "OK", 300)
             return
         }
 
         // Validate the response from Telegram.
-        let response = getResponse("\"ok\":true", 1000)
+        let response = getResponse("\"ok\":true", 800)
         if (response == "") {
             // Close the connection and return.
-            sendCommand("AT+CIPCLOSE", "OK", 1000)
+            sendCommand("AT+CIPCLOSE", "OK", 300)
             return
         }
 
         // Close the connection.
-        sendCommand("AT+CIPCLOSE", "OK", 1000)
+        sendCommand("AT+CIPCLOSE", "OK", 300)
 
         // Set the upload successful flag and return.
         telegramMessageSent = true

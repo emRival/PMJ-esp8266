@@ -55,7 +55,7 @@ namespace esp8266 {
         // Loop through all the blynk servers.
         for (let i = 0; i < blynkServers.length; i++) {
             // Connect to Blynk.
-            if (sendCommand("AT+CIPSTART=\"TCP\",\"" + blynkServers[i] + "\",80", "OK", 5000) == true) {
+            if (sendCommand("AT+CIPSTART=\"TCP\",\"" + blynkServers[i] + "\",80", "OK", 3000) == true) {
 
                 // Construct the data to send.
                 // http://blynk.cloud/external/api/get?token={token}&{pin}
@@ -66,15 +66,15 @@ namespace esp8266 {
                 sendCommand(data)
 
                 // Verify if "SEND OK" is received.
-                if (getResponse("SEND OK", 5000) != "") {
+                if (getResponse("SEND OK", 2000) != "") {
 
                     // Make sure Blynk response is 200.
-                    if (getResponse("HTTP/1.1", 5000).includes("200 OK")) {
+                    if (getResponse("HTTP/1.1", 2000).includes("200 OK")) {
 
                         // Get the pin value.
                         // It should be the last line in the response.
                         while (true) {
-                            let response = getResponse("", 200)
+                            let response = getResponse("", 100)
                             if (response == "") {
                                 break
                             } else {
@@ -89,7 +89,7 @@ namespace esp8266 {
             }
 
             // Close the connection.
-            sendCommand("AT+CIPCLOSE", "OK", 1000)
+            sendCommand("AT+CIPCLOSE", "OK", 300)
 
             // If blynk is updated successfully.
             if (blynkUpdated == true) {
@@ -130,7 +130,7 @@ namespace esp8266 {
         // Loop through all the blynk servers.
         for (let i = 0; i < blynkServers.length; i++) {
             // Connect to Blynk.
-            if (sendCommand("AT+CIPSTART=\"TCP\",\"" + blynkServers[i] + "\",80", "OK", 5000) == true) {
+            if (sendCommand("AT+CIPSTART=\"TCP\",\"" + blynkServers[i] + "\",80", "OK", 3000) == true) {
 
                 // Construct the data to send.
                 // http://blynk.cloud/external/api/update?token={token}&{pin}={value}
@@ -141,15 +141,15 @@ namespace esp8266 {
                 sendCommand(data)
 
                 // Verify if "SEND OK" is received.
-                if (getResponse("SEND OK", 5000) != "") {
+                if (getResponse("SEND OK", 2000) != "") {
 
                     // Make sure Blynk response is 200.
-                    if (getResponse("HTTP/1.1", 5000).includes("200 OK")) {
+                    if (getResponse("HTTP/1.1", 2000).includes("200 OK")) {
 
                         // Get the pin value.
                         // It should be the last line in the response.
                         while (true) {
-                            let response = getResponse("", 200)
+                            let response = getResponse("", 100)
                             if (response == "") {
                                 break
                             } else {
@@ -164,7 +164,7 @@ namespace esp8266 {
             }
 
             // Close the connection.
-            sendCommand("AT+CIPCLOSE", "OK", 1000)
+            sendCommand("AT+CIPCLOSE", "OK", 300)
 
             // If blynk is updated successfully.
             if (blynkUpdated == true) {
