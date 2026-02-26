@@ -66,7 +66,7 @@ namespace esp8266 {
         if (!debugMode) return
         let logLine = "[" + tag + "] " + msg
         lastDebugMsg = logLine
-        serial.writeLine(logLine)
+        console.log(logLine)
     }
 
 
@@ -81,8 +81,8 @@ namespace esp8266 {
     //% blockHidden=true
     //% blockId=esp8266_send_command
     export function sendCommand(command: string, expected_response: string = null, timeout: number = 100): boolean {
-        // Minimal stabilizer between commands.
-        basic.pause(1)
+        // Small stabilizer between commands.
+        basic.pause(5)
 
         // Flush the Rx buffer.
         serial.readString()
@@ -127,6 +127,8 @@ namespace esp8266 {
                 // Trim the Rx data before loop again.
                 rxData = rxData.slice(rxData.indexOf("\r\n") + 2)
             }
+            // Yield to scheduler so serial buffer can receive data
+            basic.pause(1)
         }
 
         debugLog("CMD", (result ? "OK" : "FAIL") + " (" + (input.runningTime() - timestamp) + "ms)")
@@ -256,8 +258,17 @@ namespace esp8266 {
         // Restore the ESP8266 factory settings.
         if (sendCommand("AT+RESTORE", "ready", 5000) == false) return
 
+        // Wait for ESP8266 to fully reboot after restore.
+        basic.pause(500)
+
+        // Flush any remaining boot messages.
+        serial.readString()
+
         // Turn off echo.
-        if (sendCommand("ATE0", "OK") == false) return
+        if (sendCommand("ATE0", "OK", 1000) == false) return
+
+        // Test basic AT command.
+        if (sendCommand("AT", "OK", 500) == false) return
 
         // Initialized successfully.
         // Set the flag.
@@ -302,11 +313,23 @@ namespace esp8266 {
     //% blockId=esp8266_connect_wifi
     //% block="connect to WiFi: SSID %ssid Password %password"
     export function connectWiFi(ssid: string, password: string) {
+        debugLog("WIFI", "Connecting to: " + ssid)
+
         // Set to station mode.
-        sendCommand("AT+CWMODE=1", "OK")
+        sendCommand("AT+CWMODE=1", "OK", 500)
 
         // Connect to WiFi router.
         sendCommand("AT+CWJAP=\"" + ssid + "\",\"" + password + "\"", "OK", 20000)
+
+        // Wait for DHCP to assign IP address.
+        basic.pause(1000)
+
+        // Verify connection.
+        if (isWifiConnected()) {
+            debugLog("WIFI", "Connected!")
+        } else {
+            debugLog("WIFI", "FAIL: Not connected")
+        }
     }
 
 
